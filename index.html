@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="light">
+<html lang="ar" dir="rtl" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -792,6 +792,84 @@ body { direction: rtl; font-family: 'Segoe UI','Cairo',Arial,sans-serif;
   #report-printable { display: block !important; }
 }
 
+  
+/* ── Quran Banner ── */
+.quran-banner {
+  background: linear-gradient(135deg, #0a2e1a 0%, #0d4a28 40%, #1a6b3a 70%, #0d4a28 100%);
+  border-radius: var(--radius-lg);
+  padding: 32px 40px;
+  margin-bottom: 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(34,197,94,.2);
+  box-shadow: 0 4px 24px rgba(0,0,0,.3);
+}
+.quran-banner::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2322c55e' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: .4;
+}
+.quran-banner-verse {
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.8;
+  letter-spacing: .02em;
+  position: relative;
+  text-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+.quran-banner-ref {
+  font-size: 13px;
+  color: rgba(255,255,255,.55);
+  margin-top: 10px;
+  position: relative;
+  font-style: italic;
+}
+.quran-banner-deco {
+  color: #4ade80;
+  font-size: 22px;
+  opacity: .8;
+}
+
+  
+/* ── Charts & Advanced Dashboard ── */
+.dash-row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 20px; }
+.mini-chart-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px;
+  box-shadow: var(--shadow-sm);
+}
+.mini-chart-title { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 14px; display:flex;align-items:center;gap:6px; }
+.donut-wrap { display:flex; align-items:center; gap:16px; }
+.donut-legend { display:flex; flex-direction:column; gap:6px; flex:1; }
+.legend-row { display:flex; align-items:center; gap:6px; font-size:12px; }
+.legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.legend-label { flex:1; color:var(--text-sub); }
+.legend-val { font-weight:700; color:var(--text-main); }
+.bar-chart-wrap { display:flex; align-items:flex-end; gap:6px; height:80px; margin-top:4px; }
+.bar-col { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+.bar-fill-col { width:100%; border-radius:4px 4px 0 0; transition:height .4s; min-height:3px; }
+.bar-label-col { font-size:10px; color:var(--text-hint); white-space:nowrap; }
+.bar-val-col { font-size:11px; font-weight:700; color:var(--text-main); }
+.progress-list { display:flex; flex-direction:column; gap:10px; }
+.prog-row { display:flex; flex-direction:column; gap:4px; }
+.prog-header { display:flex; justify-content:space-between; font-size:12px; }
+.prog-name { color:var(--text-sub); }
+.prog-pct  { font-weight:700; color:var(--text-main); }
+.prog-track { height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+.prog-fill  { height:100%; border-radius:3px; transition:width .6s; }
+
+/* stat cards second row */
+.stats-grid-2 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 20px; }
+.stat-card-sm {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.stat-card-sm .stat-value { font-size: 22px; }
+
   </style>
 </head>
 <body>
@@ -931,10 +1009,14 @@ body { direction: rtl; font-family: 'Segoe UI','Cairo',Arial,sans-serif;
             <h2 class="page-title">لوحة التحكم</h2>
             <p class="page-subtitle" id="dashboard-date"></p>
           </div>
-          <div style="text-align:center;font-size:14px;color:var(--clr-primary);font-style:italic;opacity:.85;">
-            ﴿ إِنَّا نَحْنُ نَزَّلْنَا الذِّكْرَ وَإِنَّا لَهُ لَحَافِظُونَ ﴾
-          </div>
         </div>
+
+      <!-- Quran Banner -->
+      <div class="quran-banner">
+        <div class="quran-banner-deco">❧ &nbsp; ✦ &nbsp; ❧</div>
+        <div class="quran-banner-verse">﴿ إِنَّا نَحْنُ نَزَّلْنَا الذِّكْرَ وَإِنَّا لَهُ لَحَافِظُونَ ﴾</div>
+        <div class="quran-banner-ref">سورة الحجر — الآية 9</div>
+      </div>
 
         <!-- Stats -->
         <div class="stats-grid-main">
@@ -2653,7 +2735,7 @@ let _sb = null;
 // ============================================================
 // أسماء السور (١–١١٤)
 // ============================================================
-const SURAHS = [
+window.SURAHS = [
   { number: 1,   name: 'الفاتحة',        verses: 7   },
   { number: 2,   name: 'البقرة',          verses: 286 },
   { number: 3,   name: 'آل عمران',        verses: 200 },
@@ -2773,13 +2855,13 @@ const SURAHS = [
 // ============================================================
 // ثوابت النظام
 // ============================================================
-const STUDENT_CATEGORIES = {
+window.STUDENT_CATEGORIES = {
   foundation:    'طالب تأسيس',
   intermediate:  'طالب متوسط',
   advanced:      'طالب متقدم'
 }
 
-const CIRCLE_TYPES = {
+window.CIRCLE_TYPES = {
   online:      'حلقة أونلاين',
   foundation:  'حلقة تأسيس',
   hifz:        'حلقة حفظ',
@@ -2787,21 +2869,21 @@ const CIRCLE_TYPES = {
   advanced:    'حلقة متقدمة'
 }
 
-const USER_ROLES = {
+window.USER_ROLES = {
   admin_general:  'مدير عام',
   admin_system:   'مدير نظام',
   supervisor:     'مشرف',
   teacher:        'معلم'
 }
 
-const RATING_LABELS = {
+window.RATING_LABELS = {
   excellent:   'ممتاز',
   good:        'جيد جداً',
   acceptable:  'جيد',
   weak:        'مقبول'
 }
 
-const PAYMENT_METHODS = {
+window.PAYMENT_METHODS = {
   cash:           'نقداً',
   bank_transfer:  'تحويل بنكي',
   instapay:       'إنستاباي',
@@ -2976,6 +3058,25 @@ function arabicAuthError(message) {
   }
   return message
 }
+
+// ── Global auth exports ──
+window.signIn = typeof signIn !== 'undefined' ? signIn : null;
+window.signOut = typeof signOut !== 'undefined' ? signOut : null;
+window.getSession = typeof getSession !== 'undefined' ? getSession : null;
+window.isAdmin = typeof isAdmin !== 'undefined' ? isAdmin : null;
+window.getCurrentProfile = typeof getCurrentProfile !== 'undefined' ? getCurrentProfile : null;
+
+// ── Global exports ──
+if (typeof signIn !== "undefined") window.signIn = signIn;
+if (typeof signOut !== "undefined") window.signOut = signOut;
+if (typeof getSession !== "undefined") window.getSession = getSession;
+if (typeof fetchProfile !== "undefined") window.fetchProfile = fetchProfile;
+if (typeof createUser !== "undefined") window.createUser = createUser;
+if (typeof updateUser !== "undefined") window.updateUser = updateUser;
+if (typeof hasRole !== "undefined") window.hasRole = hasRole;
+if (typeof isAdmin !== "undefined") window.isAdmin = isAdmin;
+if (typeof getCurrentProfile !== "undefined") window.getCurrentProfile = getCurrentProfile;
+if (typeof onAuthStateChange !== "undefined") window.onAuthStateChange = onAuthStateChange;
 </script>
 
 <!-- ════ GUARD ════ -->
@@ -3091,6 +3192,19 @@ function showUnauthorized() {
     </div>
   `
 }
+
+// ── Global guard exports ──
+window.requireAuth = typeof requireAuth !== 'undefined' ? requireAuth : null;
+window.requireRole = typeof requireRole !== 'undefined' ? requireRole : null;
+window.getProfile = typeof getProfile !== 'undefined' ? getProfile : null;
+window.applyRoleVisibility = typeof applyRoleVisibility !== 'undefined' ? applyRoleVisibility : null;
+
+// ── Global exports ──
+if (typeof requireAuth !== "undefined") window.requireAuth = requireAuth;
+if (typeof requireRole !== "undefined") window.requireRole = requireRole;
+if (typeof getProfile !== "undefined") window.getProfile = getProfile;
+if (typeof applyRoleVisibility !== "undefined") window.applyRoleVisibility = applyRoleVisibility;
+if (typeof redirectToLogin !== "undefined") window.redirectToLogin = redirectToLogin;
 </script>
 
 <!-- ════ API ════ -->
@@ -3112,7 +3226,7 @@ function handleError(error, context = '') {
 // ===================================================
 // STUDENTS — الطلاب
 // ===================================================
-const studentsApi = {
+window.studentsApi = {
 
   async getAll(filters = {}) {
     let query = _sb.from('student_details').select('*')
@@ -3192,7 +3306,7 @@ const studentsApi = {
 // ===================================================
 // TEACHERS — المعلمون
 // ===================================================
-const teachersApi = {
+window.teachersApi = {
 
   async getAll() {
     const { data, error } = await _sb
@@ -3239,7 +3353,7 @@ const teachersApi = {
 // ===================================================
 // CIRCLES — الحلقات
 // ===================================================
-const circlesApi = {
+window.circlesApi = {
 
   async getAll() {
     const { data, error } = await _sb
@@ -3286,7 +3400,7 @@ const circlesApi = {
 // ===================================================
 // RECITATIONS — التسميع
 // ===================================================
-const recitationsApi = {
+window.recitationsApi = {
 
   async getAll(filters = {}) {
     let query = _sb
@@ -3344,7 +3458,7 @@ const recitationsApi = {
 // ===================================================
 // ATTENDANCE — الحضور والغياب
 // ===================================================
-const attendanceApi = {
+window.attendanceApi = {
 
   async getByDate(date, circleId = null) {
     let query = _sb
@@ -3389,7 +3503,7 @@ const attendanceApi = {
 // ===================================================
 // MEMORIZATION — تقدم الحفظ
 // ===================================================
-const memorationApi = {
+window.memorationApi = {
 
   async getStudentProgress(studentId) {
     const { data, error } = await _sb
@@ -3427,7 +3541,7 @@ const memorationApi = {
 // ===================================================
 // PAYMENTS — المالية
 // ===================================================
-const paymentsApi = {
+window.paymentsApi = {
 
   async getAll(filters = {}) {
     let query = _sb
@@ -3490,7 +3604,7 @@ const paymentsApi = {
 // ===================================================
 // ACTIVITIES — الأنشطة والمسابقات
 // ===================================================
-const activitiesApi = {
+window.activitiesApi = {
 
   async getAll() {
     const { data, error } = await _sb
@@ -3536,7 +3650,7 @@ const activitiesApi = {
 // ===================================================
 // SETTINGS — الإعدادات
 // ===================================================
-const settingsApi = {
+window.settingsApi = {
 
   async getAll() {
     const { data, error } = await _sb.from('settings').select('*')
@@ -3574,7 +3688,7 @@ const settingsApi = {
 // ===================================================
 // DASHBOARD — لوحة التحكم
 // ===================================================
-const dashboardApi = {
+window.dashboardApi = {
 
   async getStats() {
     const { data, error } = await _sb.from('dashboard_stats').select('*').single()
@@ -3590,7 +3704,7 @@ const dashboardApi = {
 // ===================================================
 // REPORTS — التقارير
 // ===================================================
-const reportsApi = {
+window.reportsApi = {
 
   async getStudentReport(studentId) {
     const [student, recitations, attendance, progress, payments] = await Promise.all([
@@ -3617,7 +3731,7 @@ const reportsApi = {
 // ===================================================
 // NOTIFICATIONS — الإشعارات
 // ===================================================
-const notificationsApi = {
+window.notificationsApi = {
 
   async getMyNotifications() {
     const { data, error } = await _sb
@@ -3675,7 +3789,7 @@ const notificationsApi = {
 // ===================================================
 // CERTIFICATES — الشهادات
 // ===================================================
-const certificatesApi = {
+window.certificatesApi = {
 
   async getAll(studentId = null) {
     let query = _sb
@@ -3705,7 +3819,7 @@ const certificatesApi = {
 // ===================================================
 // REALTIME — الإشعارات الفورية عند تغيير البيانات
 // ===================================================
-const realtimeApi = {
+window.realtimeApi = {
   channels: [],
 
   subscribeToChanges(tables, callback) {
@@ -3993,6 +4107,39 @@ function formatDate(dateStr) {
   })
 }
 </script>
+</script>
+
+<!-- ════ GLOBAL ALIASES — makes ALL APIs/functions accessible everywhere ════ -->
+<script>
+// This block runs after all API/auth/guard/ui script blocks
+// It ensures every identifier is on window so cross-block references work
+
+// ── API objects (already window.X from their definition) ──
+// studentsApi, teachersApi, circlesApi etc. are already window.X
+
+// ── PDF ──
+if (typeof generateStudentReport !== 'undefined') window.generateStudentReport = generateStudentReport;
+if (typeof formatDate !== 'undefined') window.formatDate = formatDate;
+if (typeof buildReportHTML !== 'undefined') window.buildReportHTML = buildReportHTML;
+
+// ── Verify critical globals ──
+(function checkGlobals() {
+  const required = [
+    'studentsApi','teachersApi','circlesApi','recitationsApi',
+    'attendanceApi','memorationApi','paymentsApi','activitiesApi',
+    'settingsApi','dashboardApi','notificationsApi','realtimeApi',
+    'signIn','signOut','getSession','requireAuth','applyRoleVisibility',
+    'showToast','confirmDialog','formatDate','injectConfirmModal',
+    'SURAHS','STUDENT_CATEGORIES','CIRCLE_TYPES','RATING_LABELS'
+  ];
+  const missing = required.filter(k => !window[k]);
+  if (missing.length > 0) {
+    console.error('⚠️ Missing globals:', missing);
+  } else {
+    console.log('✅ All globals OK (' + required.length + ')');
+  }
+})();
+
 
 <!-- ════ UI ════ -->
 <script>
@@ -4129,6 +4276,14 @@ function injectConfirmModal() {
   `
   document.body.appendChild(div.firstElementChild)
 }
+
+// ── Global exports ──
+if (typeof showToast !== "undefined") window.showToast = showToast;
+if (typeof confirmDialog !== "undefined") window.confirmDialog = confirmDialog;
+if (typeof formatDate !== "undefined") window.formatDate = formatDate;
+if (typeof formatCurrency !== "undefined") window.formatCurrency = formatCurrency;
+if (typeof formatPercent !== "undefined") window.formatPercent = formatPercent;
+if (typeof injectConfirmModal !== "undefined") window.injectConfirmModal = injectConfirmModal;
 </script>
 
 <!-- ════ COMPONENTS ════ -->
@@ -4136,6 +4291,19 @@ function injectConfirmModal() {
 // src/components/students.js
 // ============================================================
 // منطق إدارة الطلاب
+// ── window aliases ──
+  var studentsApi = window.studentsApi !== undefined ? window.studentsApi : studentsApi;
+  var circlesApi = window.circlesApi !== undefined ? window.circlesApi : circlesApi;
+  var reportsApi = window.reportsApi !== undefined ? window.reportsApi : reportsApi;
+  var settingsApi = window.settingsApi !== undefined ? window.settingsApi : settingsApi;
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+  var formatDate = window.formatDate !== undefined ? window.formatDate : formatDate;
+  var confirmDialog = window.confirmDialog !== undefined ? window.confirmDialog : confirmDialog;
+  var STUDENT_CATEGORIES = window.STUDENT_CATEGORIES !== undefined ? window.STUDENT_CATEGORIES : STUDENT_CATEGORIES;
+  var CIRCLE_TYPES = window.CIRCLE_TYPES !== undefined ? window.CIRCLE_TYPES : CIRCLE_TYPES;
+  var SURAHS = window.SURAHS !== undefined ? window.SURAHS : SURAHS;
+  var RATING_LABELS = window.RATING_LABELS !== undefined ? window.RATING_LABELS : RATING_LABELS;
+
 // ============================================================
 
 
@@ -4588,6 +4756,14 @@ window.Students = Students
 // src/components/circles.js
 // ============================================================
 // إدارة الحلقات — الأنواع الخمسة
+// ── window aliases ──
+  var circlesApi = window.circlesApi !== undefined ? window.circlesApi : circlesApi;
+  var teachersApi = window.teachersApi !== undefined ? window.teachersApi : teachersApi;
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+  var formatDate = window.formatDate !== undefined ? window.formatDate : formatDate;
+  var confirmDialog = window.confirmDialog !== undefined ? window.confirmDialog : confirmDialog;
+  var CIRCLE_TYPES = window.CIRCLE_TYPES !== undefined ? window.CIRCLE_TYPES : CIRCLE_TYPES;
+
 // ============================================================
 
 
@@ -4857,6 +5033,17 @@ window.Circles = Circles
 // src/components/recitations.js
 // ============================================================
 // التسميع — نظام السور (١–١١٤)
+// ── window aliases ──
+  var recitationsApi = window.recitationsApi !== undefined ? window.recitationsApi : recitationsApi;
+  var studentsApi = window.studentsApi !== undefined ? window.studentsApi : studentsApi;
+  var circlesApi = window.circlesApi !== undefined ? window.circlesApi : circlesApi;
+  var memorationApi = window.memorationApi !== undefined ? window.memorationApi : memorationApi;
+  var SURAHS = window.SURAHS !== undefined ? window.SURAHS : SURAHS;
+  var RATING_LABELS = window.RATING_LABELS !== undefined ? window.RATING_LABELS : RATING_LABELS;
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+  var formatDate = window.formatDate !== undefined ? window.formatDate : formatDate;
+  var getProfile = window.getProfile !== undefined ? window.getProfile : getProfile;
+
 // ============================================================
 
 
@@ -5131,6 +5318,13 @@ window.Recitations = Recitations
 // src/components/attendance.js
 // ============================================================
 // الحضور والغياب اليومي
+// ── window aliases ──
+  var attendanceApi = window.attendanceApi !== undefined ? window.attendanceApi : attendanceApi;
+  var circlesApi = window.circlesApi !== undefined ? window.circlesApi : circlesApi;
+  var studentsApi = window.studentsApi !== undefined ? window.studentsApi : studentsApi;
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+  var formatDate = window.formatDate !== undefined ? window.formatDate : formatDate;
+
 // ============================================================
 
 
@@ -5372,6 +5566,16 @@ window.Attendance = Attendance
 // src/components/finance.js
 // ============================================================
 // النظام المالي — الجنيه المصري، رسوم متغيرة
+// ── window aliases ──
+  var paymentsApi = window.paymentsApi !== undefined ? window.paymentsApi : paymentsApi;
+  var studentsApi = window.studentsApi !== undefined ? window.studentsApi : studentsApi;
+  var settingsApi = window.settingsApi !== undefined ? window.settingsApi : settingsApi;
+  var PAYMENT_METHODS = window.PAYMENT_METHODS !== undefined ? window.PAYMENT_METHODS : PAYMENT_METHODS;
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+  var formatDate = window.formatDate !== undefined ? window.formatDate : formatDate;
+  var confirmDialog = window.confirmDialog !== undefined ? window.confirmDialog : confirmDialog;
+  var isAdmin = window.isAdmin !== undefined ? window.isAdmin : isAdmin;
+
 // ============================================================
 
 
@@ -5779,6 +5983,13 @@ window.Finance = Finance
 // src/components/activities.js
 // ============================================================
 // الأنشطة والمسابقات — وحدة موحدة
+// ── window aliases ──
+  var activitiesApi = window.activitiesApi !== undefined ? window.activitiesApi : activitiesApi;
+  var studentsApi = window.studentsApi !== undefined ? window.studentsApi : studentsApi;
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+  var formatDate = window.formatDate !== undefined ? window.formatDate : formatDate;
+  var confirmDialog = window.confirmDialog !== undefined ? window.confirmDialog : confirmDialog;
+
 // ============================================================
 
 
@@ -6103,6 +6314,16 @@ window.Activities = Activities
 // src/components/guardian.js
 // ============================================================
 // بوابة ولي الأمر — طباعة وتنزيل التقارير
+// ── window aliases ──
+  var studentsApi = window.studentsApi !== undefined ? window.studentsApi : studentsApi;
+  var reportsApi = window.reportsApi !== undefined ? window.reportsApi : reportsApi;
+  var settingsApi = window.settingsApi !== undefined ? window.settingsApi : settingsApi;
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+  var formatDate = window.formatDate !== undefined ? window.formatDate : formatDate;
+  var STUDENT_CATEGORIES = window.STUDENT_CATEGORIES !== undefined ? window.STUDENT_CATEGORIES : STUDENT_CATEGORIES;
+  var SURAHS = window.SURAHS !== undefined ? window.SURAHS : SURAHS;
+  var RATING_LABELS = window.RATING_LABELS !== undefined ? window.RATING_LABELS : RATING_LABELS;
+
 // لا تتطلب تسجيل دخول من ولي الأمر
 // ============================================================
 
@@ -6362,6 +6583,21 @@ window.Guardian = Guardian
 // src/components/reports.js
 // ============================================================
 // التقارير المتقدمة — للمديرين فقط
+// ── window aliases ──
+  var studentsApi = window.studentsApi !== undefined ? window.studentsApi : studentsApi;
+  var teachersApi = window.teachersApi !== undefined ? window.teachersApi : teachersApi;
+  var circlesApi = window.circlesApi !== undefined ? window.circlesApi : circlesApi;
+  var recitationsApi = window.recitationsApi !== undefined ? window.recitationsApi : recitationsApi;
+  var paymentsApi = window.paymentsApi !== undefined ? window.paymentsApi : paymentsApi;
+  var activitiesApi = window.activitiesApi !== undefined ? window.activitiesApi : activitiesApi;
+  var settingsApi = window.settingsApi !== undefined ? window.settingsApi : settingsApi;
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+  var formatDate = window.formatDate !== undefined ? window.formatDate : formatDate;
+  var isAdmin = window.isAdmin !== undefined ? window.isAdmin : isAdmin;
+  var STUDENT_CATEGORIES = window.STUDENT_CATEGORIES !== undefined ? window.STUDENT_CATEGORIES : STUDENT_CATEGORIES;
+  var CIRCLE_TYPES = window.CIRCLE_TYPES !== undefined ? window.CIRCLE_TYPES : CIRCLE_TYPES;
+  var RATING_LABELS = window.RATING_LABELS !== undefined ? window.RATING_LABELS : RATING_LABELS;
+
 // يومية / أسبوعية / شهرية
 // ============================================================
 
@@ -6899,6 +7135,15 @@ window.Reports = Reports
 // src/components/users.js
 // ============================================================
 // إدارة المستخدمين والصلاحيات
+// ── window aliases ──
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+  var formatDate = window.formatDate !== undefined ? window.formatDate : formatDate;
+  var confirmDialog = window.confirmDialog !== undefined ? window.confirmDialog : confirmDialog;
+  var isAdmin = window.isAdmin !== undefined ? window.isAdmin : isAdmin;
+  var USER_ROLES = window.USER_ROLES !== undefined ? window.USER_ROLES : USER_ROLES;
+  var createUser = window.createUser !== undefined ? window.createUser : createUser;
+  var updateUser = window.updateUser !== undefined ? window.updateUser : updateUser;
+
 // ============================================================
 
 
@@ -7099,6 +7344,11 @@ window.Users = Users
 // src/components/settings.js
 // ============================================================
 // إعدادات الدار — للمديرين فقط
+// ── window aliases ──
+  var settingsApi = window.settingsApi !== undefined ? window.settingsApi : settingsApi;
+  var isAdmin = window.isAdmin !== undefined ? window.isAdmin : isAdmin;
+  var showToast = window.showToast !== undefined ? window.showToast : showToast;
+
 // ============================================================
 
 
@@ -7332,7 +7582,83 @@ async function loadDashboard() {
           </tr>`).join('')
     }
   } catch(e) { console.error('Dashboard:', e) }
+  
+  // Update charts
+  try { await updateDashboardCharts() } catch(e) {}
 }
+
+async function updateDashboardCharts() {
+  // Attendance donut
+  const today = new Date().toISOString().split('T')[0]
+  const { data: attData } = await _sb.from('attendance')
+    .select('status').gte('session_date', new Date(Date.now()-30*864e5).toISOString().split('T')[0])
+  
+  if (attData && attData.length) {
+    const pres = attData.filter(a=>a.status==='present').length
+    const abs  = attData.filter(a=>a.status==='absent').length
+    const exc  = attData.filter(a=>a.status==='excused').length
+    const total = attData.length
+    const pct = Math.round(pres/total*100)
+    const arc = document.getElementById('donut-arc')
+    const pctEl = document.getElementById('donut-pct')
+    if (arc) arc.setAttribute('stroke-dasharray', `${pct*2.2} ${220-pct*2.2}`)
+    if (pctEl) pctEl.textContent = pct + '%'
+    const pe=document.getElementById('att-present-count')
+    const ae=document.getElementById('att-absent-count')
+    const ee=document.getElementById('att-excused-count')
+    if(pe)pe.textContent=pres
+    if(ae)ae.textContent=abs
+    if(ee)ee.textContent=exc
+  }
+  
+  // Weekly bars
+  const bars = document.getElementById('weekly-bars')
+  if (bars) {
+    const days = []
+    for(let i=6;i>=0;i--) {
+      const d = new Date(); d.setDate(d.getDate()-i)
+      days.push(d)
+    }
+    const results = await Promise.all(days.map(async d => {
+      const dateStr = d.toISOString().split('T')[0]
+      const { count } = await _sb.from('recitations')
+        .select('id', {count:'exact',head:true}).eq('session_date', dateStr)
+      return { day: d.toLocaleDateString('ar-EG',{weekday:'short'}), count: count||0 }
+    }))
+    const max = Math.max(...results.map(r=>r.count), 1)
+    bars.innerHTML = results.map((r,i) => `
+      <div class="bar-col">
+        <div class="bar-val-col">${r.count||''}</div>
+        <div class="bar-fill-col" style="height:${Math.max(5,r.count/max*100)}%;background:${i===results.length-1?'#22c55e':'#3b82f6'};"></div>
+        <div class="bar-label-col">${r.day}</div>
+      </div>`).join('')
+  }
+  
+  // Top students progress
+  const prog = document.getElementById('top-progress')
+  if (prog) {
+    const { data: students } = await _sb.from('student_details')
+      .select('name, surahs_memorized').eq('is_active', true)
+      .order('surahs_memorized', {ascending:false}).limit(5)
+    
+    if (students && students.length) {
+      const maxS = Math.max(...students.map(s=>s.surahs_memorized||0), 1)
+      prog.innerHTML = students.map(s => `
+        <div class="prog-row">
+          <div class="prog-header">
+            <span class="prog-name">${s.name}</span>
+            <span class="prog-pct">${s.surahs_memorized||0} سورة</span>
+          </div>
+          <div class="prog-track">
+            <div class="prog-fill" style="width:${Math.max(3,(s.surahs_memorized||0)/114*100)}%;background:#22c55e;"></div>
+          </div>
+        </div>`).join('')
+    } else {
+      prog.innerHTML = '<p style="font-size:12px;color:var(--text-hint);">لا توجد بيانات بعد</p>'
+    }
+  }
+}
+
 
 function initNavigation() {
   document.querySelectorAll('[data-section]').forEach(link => {
@@ -7442,7 +7768,7 @@ function toggleTheme() {
 }
 // Restore saved theme
 (function() {
-  const saved = localStorage.getItem('dar-theme') || 'light';
+  const saved = localStorage.getItem('dar-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('theme-btn');
@@ -7466,7 +7792,7 @@ function showApp() {
   document.body.className = '';
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-screen').style.display   = 'block';
-  document.getElementById('dashboard-date').textContent =
+  if(document.getElementById('theme-btn')) document.getElementById('theme-btn').textContent = saved==='dark'?'☀️':'🌙'; document.getElementById('dashboard-date').textContent =
     new Date().toLocaleDateString('ar-EG', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
   // ✅ KEY FIX: Only call main() once, and only from here
   if (!window._appBooted) {
