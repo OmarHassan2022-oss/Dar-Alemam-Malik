@@ -2096,18 +2096,7 @@ let _sb = null;
 
 
 
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  }
-})
+// _sb is the Supabase client (defined above)
 
 // ============================================================
 // أسماء السور (١–١١٤)
@@ -2280,7 +2269,7 @@ let currentUser = null
 let currentProfile = null
 
 // ===== تسجيل الدخول =====
-export async function signIn(email, password) {
+async function signIn(email, password) {
   const { data, error } = await _sb.auth.signInWithPassword({ email, password })
   if (error) throw new Error(arabicAuthError(error.message))
 
@@ -2290,14 +2279,14 @@ export async function signIn(email, password) {
 }
 
 // ===== تسجيل الخروج =====
-export async function signOut() {
+async function signOut() {
   await _sb.auth.signOut()
   currentUser = null
   currentProfile = null
 }
 
 // ===== الجلسة الحالية =====
-export async function getSession() {
+async function getSession() {
   const { data: { session } } = await _sb.auth.getSession()
   if (!session) return null
 
@@ -2309,7 +2298,7 @@ export async function getSession() {
 }
 
 // ===== جلب بيانات الملف الشخصي =====
-export async function fetchProfile(userId) {
+async function fetchProfile(userId) {
   const { data, error } = await _sb
     .from('profiles')
     .select('*')
@@ -2321,7 +2310,7 @@ export async function fetchProfile(userId) {
 }
 
 // ===== إنشاء مستخدم جديد (من قِبل المدير فقط) =====
-export async function createUser({ email, password, full_name, role, phone }) {
+async function createUser({ email, password, full_name, role, phone }) {
   // تسجيل المستخدم في Auth
   const { data, error } = await _sb.auth.signUp({
     email,
@@ -2346,7 +2335,7 @@ export async function createUser({ email, password, full_name, role, phone }) {
 }
 
 // ===== تحديث بيانات مستخدم =====
-export async function updateUser(userId, updates) {
+async function updateUser(userId, updates) {
   const { error } = await _sb
     .from('profiles')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -2356,13 +2345,13 @@ export async function updateUser(userId, updates) {
 }
 
 // ===== تغيير كلمة المرور =====
-export async function changePassword(newPassword) {
+async function changePassword(newPassword) {
   const { error } = await _sb.auth.updateUser({ password: newPassword })
   if (error) throw new Error(arabicAuthError(error.message))
 }
 
 // ===== إعادة تعيين كلمة المرور =====
-export async function resetPassword(email) {
+async function resetPassword(email) {
   const { error } = await _sb.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/reset-password`
   })
@@ -2440,7 +2429,6 @@ function arabicAuthError(message) {
 // حماية الصفحات — يُضاف في أول كل صفحة محمية
 // ============================================================
 // الاستخدام في أي صفحة:
-//   import { requireAuth, requireRole } from '../lib/guard.js'
 //   await requireAuth()                        // مطلوب تسجيل دخول
 //   await requireRole('admin_general','admin_system')  // أدوار محددة
 // ============================================================
@@ -2448,7 +2436,7 @@ function arabicAuthError(message) {
 
 let _session = null
 
-export async function requireAuth() {
+async function requireAuth() {
   try {
     _session = await getSession()
     if (!_session) {
@@ -2470,7 +2458,7 @@ export async function requireAuth() {
   }
 }
 
-export async function requireRole(...roles) {
+async function requireRole(...roles) {
   const session = await requireAuth()
   if (!roles.includes(session.profile.role)) {
     showUnauthorized()
@@ -3189,7 +3177,7 @@ const realtimeApi = {
 
 
 // ===== توليد تقرير الطالب PDF =====
-export async function generateStudentReport(reportData, settings = {}) {
+async function generateStudentReport(reportData, settings = {}) {
   const { student, recitations, attendance, progress, payments } = reportData
   const darName = settings.dar_name || 'دار الإمام مالك لتحفيظ القرآن الكريم'
 
@@ -3586,10 +3574,10 @@ function injectConfirmModal() {
 // ============================================================
 
 
-let _allStudents = []
-let _circles = []
-let _currentStudentId = null
-let _settings = {}
+let _stu_allStudents = []
+let _stu_circles = []
+let _stu_currentStudentId = null
+let _stu_settings = {}
 
 const Students = {
 
@@ -3604,17 +3592,17 @@ const Students = {
   },
 
   async loadSettings() {
-    _settings = await settingsApi.getAll()
+    _stu_settings = await settingsApi.getAll()
   },
 
   // ===== تحميل الحلقات لقائمة الاختيار =====
   async loadCircles() {
     try {
-      _circles = await circlesApi.getAll()
+      _stu_circles = await circlesApi.getAll()
       const selects = document.querySelectorAll('#student-circle, #filter-circle')
       selects.forEach(sel => {
         const current = sel.value
-        const grouped = groupCirclesByType(_circles)
+        const grouped = groupCirclesByType(_stu_circles)
         let html = '<option value="">كل الحلقات</option>'
 
         Object.entries(grouped).forEach(([type, circles]) => {
@@ -3646,9 +3634,9 @@ const Students = {
       const params = { ...filters }
       if (activeFilter !== '') params.is_active = activeFilter === 'true'
 
-      _allStudents = await studentsApi.getAll(params)
-      this.updateStats(_allStudents)
-      this.renderTable(_allStudents)
+      _stu_allStudents = await studentsApi.getAll(params)
+      this.updateStats(_stu_allStudents)
+      this.renderTable(_stu_allStudents)
     } catch (e) {
       tbody.innerHTML = `<tr><td colspan="8" class="empty-row error">خطأ في التحميل: ${e.message}</td></tr>`
     }
@@ -3736,7 +3724,7 @@ const Students = {
     const circleId = document.getElementById('filter-circle')?.value || ''
     const active   = document.getElementById('filter-active')?.value
 
-    let filtered = _allStudents.filter(s => {
+    let filtered = _stu_allStudents.filter(s => {
       if (search && !s.name.toLowerCase().includes(search)) return false
       if (category && s.category !== category) return false
       if (circleId && s.circle_id !== circleId) return false
@@ -3758,7 +3746,7 @@ const Students = {
 
   // ===== فتح مودال الإضافة =====
   openAddModal() {
-    _currentStudentId = null
+    _stu_currentStudentId = null
     document.getElementById('modal-student-title').textContent = 'إضافة طالب جديد'
     document.getElementById('btn-save-student').textContent = 'إضافة الطالب'
     document.getElementById('form-student').reset()
@@ -3770,10 +3758,10 @@ const Students = {
 
   // ===== فتح مودال التعديل =====
   async openEditModal(id) {
-    const student = _allStudents.find(s => s.id === id) || await studentsApi.getById(id)
+    const student = _stu_allStudents.find(s => s.id === id) || await studentsApi.getById(id)
     if (!student) return
 
-    _currentStudentId = id
+    _stu_currentStudentId = id
     document.getElementById('modal-student-title').textContent = 'تعديل بيانات الطالب'
     document.getElementById('btn-save-student').textContent = 'حفظ التعديلات'
     document.getElementById('student-id').value = id
@@ -3809,8 +3797,8 @@ const Students = {
     btn.textContent = 'جارٍ الحفظ...'
 
     try {
-      if (_currentStudentId) {
-        await studentsApi.update(_currentStudentId, data)
+      if (_stu_currentStudentId) {
+        await studentsApi.update(_stu_currentStudentId, data)
         showToast(`تم تحديث بيانات ${data.name} بنجاح`, 'success')
       } else {
         await studentsApi.create(data)
@@ -3822,13 +3810,13 @@ const Students = {
       showToast(err.message, 'error')
     } finally {
       btn.disabled = false
-      btn.textContent = _currentStudentId ? 'حفظ التعديلات' : 'إضافة الطالب'
+      btn.textContent = _stu_currentStudentId ? 'حفظ التعديلات' : 'إضافة الطالب'
     }
   },
 
   // ===== عرض تفاصيل الطالب =====
   async viewStudent(id) {
-    _currentStudentId = id
+    _stu_currentStudentId = id
     const modal = document.getElementById('modal-student-view')
     const content = document.getElementById('student-view-content')
     content.innerHTML = '<div style="text-align:center;padding:40px;">جارٍ التحميل...</div>'
@@ -3922,9 +3910,9 @@ const Students = {
 
   // ===== تعديل الطالب الحالي من مودال العرض =====
   editCurrentStudent() {
-    if (!_currentStudentId) return
+    if (!_stu_currentStudentId) return
     this.closeViewModal()
-    this.openEditModal(_currentStudentId)
+    this.openEditModal(_stu_currentStudentId)
   },
 
   // ===== إلغاء تفعيل طالب =====
@@ -3952,13 +3940,13 @@ const Students = {
 
   // ===== طباعة تقرير PDF =====
   async printReport(id = null) {
-    const targetId = id || _currentStudentId
+    const targetId = id || _stu_currentStudentId
     if (!targetId) return
 
     showToast('جارٍ إعداد التقرير...', 'info')
     try {
       const report = await reportsApi.getStudentReport(targetId)
-      await generateStudentReport(report, _settings)
+      await generateStudentReport(report, _stu_settings)
       showToast('تم تنزيل التقرير بنجاح', 'success')
     } catch (e) {
       showToast('خطأ في إنشاء التقرير: ' + e.message, 'error')
@@ -4038,9 +4026,9 @@ window.Students = Students
 // ============================================================
 
 
-let _allCircles = []
-let _teachers   = []
-let _currentCircleId = null
+let _cir_allCircles = []
+let _cir_teachers   = []
+let _cir_currentCircleId = null
 
 const CIRCLE_TYPE_ICONS = {
   online:     '🌐',
@@ -4067,11 +4055,11 @@ const Circles = {
 
   async loadTeachers() {
     try {
-      _teachers = await teachersApi.getAll()
+      _cir_teachers = await teachersApi.getAll()
       const sel = document.getElementById('circle-teacher')
       if (!sel) return
       sel.innerHTML = '<option value="">بدون معلم محدد</option>' +
-        _teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+        _cir_teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
     } catch (e) {
       console.error('Load teachers error:', e)
     }
@@ -4079,7 +4067,7 @@ const Circles = {
 
   async loadAll() {
     try {
-      _allCircles = await circlesApi.getAll()
+      _cir_allCircles = await circlesApi.getAll()
       this.renderCards()
       this.renderTable()
       this.updateStats()
@@ -4093,7 +4081,7 @@ const Circles = {
     const container = document.getElementById('circles-cards')
     if (!container) return
 
-    if (_allCircles.length === 0) {
+    if (_cir_allCircles.length === 0) {
       container.innerHTML = '<p class="empty-msg">لا توجد حلقات مضافة بعد</p>'
       return
     }
@@ -4101,7 +4089,7 @@ const Circles = {
     // تجميع حسب النوع
     const byType = {}
     Object.keys(CIRCLE_TYPES).forEach(t => byType[t] = [])
-    _allCircles.forEach(c => {
+    _cir_allCircles.forEach(c => {
       if (byType[c.type]) byType[c.type].push(c)
     })
 
@@ -4166,9 +4154,9 @@ const Circles = {
     const tbody = document.getElementById('circles-tbody')
     if (!tbody) return
 
-    tbody.innerHTML = _allCircles.length === 0
+    tbody.innerHTML = _cir_allCircles.length === 0
       ? '<tr><td colspan="6" class="empty-row">لا توجد حلقات</td></tr>'
-      : _allCircles.map((c, i) => `
+      : _cir_allCircles.map((c, i) => `
         <tr>
           <td>${i + 1}</td>
           <td>
@@ -4190,9 +4178,9 @@ const Circles = {
 
   // ===== إحصائيات =====
   updateStats() {
-    const total = _allCircles.length
+    const total = _cir_allCircles.length
     const byType = {}
-    _allCircles.forEach(c => byType[c.type] = (byType[c.type] || 0) + 1)
+    _cir_allCircles.forEach(c => byType[c.type] = (byType[c.type] || 0) + 1)
 
     setText('circles-total', total)
     Object.entries(byType).forEach(([type, count]) => {
@@ -4202,7 +4190,7 @@ const Circles = {
 
   // ===== فتح مودال الإضافة =====
   openAddModal() {
-    _currentCircleId = null
+    _cir_currentCircleId = null
     document.getElementById('modal-circle-title').textContent = 'إضافة حلقة جديدة'
     document.getElementById('form-circle').reset()
     document.getElementById('circle-id').value = ''
@@ -4211,10 +4199,10 @@ const Circles = {
 
   // ===== فتح مودال التعديل =====
   async openEditModal(id) {
-    const circle = _allCircles.find(c => c.id === id) || await circlesApi.getById(id)
+    const circle = _cir_allCircles.find(c => c.id === id) || await circlesApi.getById(id)
     if (!circle) return
 
-    _currentCircleId = id
+    _cir_currentCircleId = id
     document.getElementById('modal-circle-title').textContent = 'تعديل الحلقة'
     document.getElementById('circle-id').value = id
 
@@ -4253,8 +4241,8 @@ const Circles = {
     btn.textContent = 'جارٍ الحفظ...'
 
     try {
-      if (_currentCircleId) {
-        await circlesApi.update(_currentCircleId, data)
+      if (_cir_currentCircleId) {
+        await circlesApi.update(_cir_currentCircleId, data)
         showToast('تم تحديث الحلقة بنجاح', 'success')
       } else {
         await circlesApi.create(data)
@@ -4307,8 +4295,8 @@ window.Circles = Circles
 // ============================================================
 
 
-let _students = []
-let _circles  = []
+let _rec_students = []
+let _rec_circles  = []
 
 const Recitations = {
 
@@ -4323,21 +4311,21 @@ const Recitations = {
   },
 
   async loadStudents() {
-    _students = await studentsApi.getAll({ is_active: true })
+    _rec_students = await studentsApi.getAll({ is_active: true })
     const sel = document.getElementById('rec-student')
     if (!sel) return
     sel.innerHTML = '<option value="">اختر الطالب</option>' +
-      _students.map(s =>
+      _rec_students.map(s =>
         `<option value="${s.id}" data-circle="${s.circle_id}">${s.name} — ${s.circle_name||'بدون حلقة'}</option>`
       ).join('')
   },
 
   async loadCircles() {
-    _circles = await circlesApi.getAll()
+    _rec_circles = await circlesApi.getAll()
     const sel = document.getElementById('rec-circle-filter')
     if (!sel) return
     sel.innerHTML = '<option value="">كل الحلقات</option>' +
-      _circles.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
+      _rec_circles.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
   },
 
   // ===== ملء قائمة السور مع الرقم والاسم =====
@@ -4581,8 +4569,8 @@ window.Recitations = Recitations
 // ============================================================
 
 
-let _circles  = []
-let _students = []
+let _att_circles  = []
+let _att_students = []
 
 const STATUS_OPTIONS = [
   { value: 'present',  label: 'حاضر',   icon: '✅', cls: 'status-present' },
@@ -4607,11 +4595,11 @@ const Attendance = {
 
   async loadCircles() {
     try {
-      _circles = await circlesApi.getAll()
+      _att_circles = await circlesApi.getAll()
       const sel = document.getElementById('att-circle')
       if (!sel) return
       sel.innerHTML = '<option value="">اختر الحلقة (اختياري)</option>' +
-        _circles.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
+        _att_circles.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
     } catch (e) {
       console.error(e)
     }
@@ -4646,7 +4634,7 @@ const Attendance = {
       // تحميل الطلاب
       const filters = { is_active: true }
       if (circleId) filters.circle_id = circleId
-      _students = await studentsApi.getAll(filters)
+      _att_students = await studentsApi.getAll(filters)
 
       // تحميل الحضور المسجل لهذا اليوم
       const existing = await attendanceApi.getByDate(date, circleId || null)
@@ -4654,14 +4642,14 @@ const Attendance = {
       existing.forEach(a => existingMap[a.student_id] = a)
 
       // إحصائيات سريعة
-      this.updateQuickStats(existingMap, _students.length)
+      this.updateQuickStats(existingMap, _att_students.length)
 
-      if (_students.length === 0) {
+      if (_att_students.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="empty-row">لا يوجد طلاب في هذه الحلقة</td></tr>'
         return
       }
 
-      tbody.innerHTML = _students.map((s, i) => {
+      tbody.innerHTML = _att_students.map((s, i) => {
         const current = existingMap[s.id]
         const status  = current?.status || 'present'
 
@@ -4736,7 +4724,7 @@ const Attendance = {
       const btn = row.querySelector(`.status-btn[data-status="${status}"]`)
       if (btn) this.setStatus(studentId, status, btn)
     })
-    showToast(`تم تحديد ${_students.length} طالب كـ ${STATUS_OPTIONS.find(o=>o.value===status)?.label}`, 'info')
+    showToast(`تم تحديد ${_att_students.length} طالب كـ ${STATUS_OPTIONS.find(o=>o.value===status)?.label}`, 'info')
   },
 
   // ===== حفظ الحضور =====
@@ -4822,11 +4810,11 @@ window.Attendance = Attendance
 // ============================================================
 
 
-let _students      = []
-let _payments      = []
-let _settings      = {}
-let _currentFee    = 200
-let _activeTab     = 'all'  // all | pending | late
+let _fin_students      = []
+let _fin_payments      = []
+let _fin_settings      = {}
+let _fin_currentFee    = 200
+let _fin_activeTab     = 'all'  // all | pending | late
 
 const Finance = {
 
@@ -4850,25 +4838,25 @@ const Finance = {
 
   // ===== تحميل الإعدادات =====
   async loadSettings() {
-    _settings = await settingsApi.getAll()
-    _currentFee = parseFloat(_settings.subscription_fee) || 200
+    _fin_settings = await settingsApi.getAll()
+    _fin_currentFee = parseFloat(_fin_settings.subscription_fee) || 200
 
     // عرض الرسوم الحالية
-    setEl('current-fee-display', `${_currentFee.toLocaleString('ar-EG')} ج.م.`)
-    setEl('payment-amount-default', _currentFee)
+    setEl('current-fee-display', `${_fin_currentFee.toLocaleString('ar-EG')} ج.م.`)
+    setEl('payment-amount-default', _fin_currentFee)
 
     // ملء نموذج تسجيل الدفعة بالقيمة الافتراضية
     const amountInput = document.getElementById('payment-amount')
-    if (amountInput && !amountInput.value) amountInput.value = _currentFee
+    if (amountInput && !amountInput.value) amountInput.value = _fin_currentFee
   },
 
   // ===== تحميل الطلاب =====
   async loadStudents() {
-    _students = await studentsApi.getAll({ is_active: true })
+    _fin_students = await studentsApi.getAll({ is_active: true })
     const sel = document.getElementById('payment-student')
     if (!sel) return
     sel.innerHTML = '<option value="">اختر الطالب</option>' +
-      _students.map(s =>
+      _fin_students.map(s =>
         `<option value="${s.id}">${s.name}${s.circle_name ? ' — ' + s.circle_name : ''}</option>`
       ).join('')
   },
@@ -4880,12 +4868,12 @@ const Finance = {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-row">جارٍ التحميل...</td></tr>'
 
     try {
-      if (_activeTab === 'pending') filters.status = 'pending'
-      else if (_activeTab === 'late') filters.status = 'late'
+      if (_fin_activeTab === 'pending') filters.status = 'pending'
+      else if (_fin_activeTab === 'late') filters.status = 'late'
 
-      _payments = await paymentsApi.getAll(filters)
-      this.renderTable(_payments)
-      this.updateStats(_payments)
+      _fin_payments = await paymentsApi.getAll(filters)
+      this.renderTable(_fin_payments)
+      this.updateStats(_fin_payments)
     } catch (e) {
       tbody.innerHTML = `<tr><td colspan="8" class="empty-row error">${e.message}</td></tr>`
     }
@@ -5010,7 +4998,7 @@ const Finance = {
       btn.addEventListener('click', () => {
         document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('tab-active'))
         btn.classList.add('tab-active')
-        _activeTab = btn.dataset.tab
+        _fin_activeTab = btn.dataset.tab
         this.loadPayments()
       })
     })
@@ -5062,7 +5050,7 @@ const Finance = {
 
       // إعادة ضبط المبلغ الافتراضي
       const amountInput = document.getElementById('payment-amount')
-      if (amountInput) amountInput.value = _currentFee
+      if (amountInput) amountInput.value = _fin_currentFee
 
       await this.loadPayments()
       await this.loadLatePayments()
@@ -5121,7 +5109,7 @@ const Finance = {
     if (!month) { showToast('اختر الشهر أولاً', 'error'); return }
 
     const ok = await confirmDialog(
-      `إنشاء دفعات ${_students.length} طالب بمبلغ ${_currentFee} ج.م. للشهر ${month}؟`
+      `إنشاء دفعات ${_fin_students.length} طالب بمبلغ ${_fin_currentFee} ج.م. للشهر ${month}؟`
     )
     if (!ok) return
 
@@ -5131,11 +5119,11 @@ const Finance = {
     let created = 0, skipped = 0
     const monthDate = month + '-01'
 
-    for (const student of _students) {
+    for (const student of _fin_students) {
       try {
         await paymentsApi.create({
           student_id:    student.id,
-          amount:        _currentFee,
+          amount:        _fin_currentFee,
           payment_month: monthDate,
           status:        'pending',
           type:          'اشتراك شهري'
@@ -5160,12 +5148,12 @@ const Finance = {
     const newFee = parseFloat(document.getElementById('new-fee-input')?.value)
     if (!newFee || newFee <= 0) { showToast('أدخل قيمة صحيحة', 'error'); return }
 
-    const ok = await confirmDialog(`تغيير الرسوم الشهرية من ${_currentFee} إلى ${newFee} ج.م.؟`)
+    const ok = await confirmDialog(`تغيير الرسوم الشهرية من ${_fin_currentFee} إلى ${newFee} ج.م.؟`)
     if (!ok) return
 
     try {
       await settingsApi.set('subscription_fee', String(newFee))
-      _currentFee = newFee
+      _fin_currentFee = newFee
       setEl('current-fee-display', `${newFee.toLocaleString('ar-EG')} ج.م.`)
       showToast(`✅ تم تحديث الرسوم إلى ${newFee} ج.م.`, 'success')
     } catch (e) {
@@ -5175,7 +5163,7 @@ const Finance = {
 
   // ===== طباعة إيصال =====
   async printReceipt(paymentId) {
-    const payment = _payments.find(p => p.id === paymentId)
+    const payment = _fin_payments.find(p => p.id === paymentId)
     if (!payment) return
     Finance.openReceiptModal(payment)
   },
@@ -5188,7 +5176,7 @@ const Finance = {
     document.getElementById('receipt-content').innerHTML = `
       <div class="receipt-body" id="receipt-print-area">
         <div class="receipt-header">
-          <div class="receipt-dar-name">${_settings.dar_name || 'دار الإمام مالك'}</div>
+          <div class="receipt-dar-name">${_fin_settings.dar_name || 'دار الإمام مالك'}</div>
           <div class="receipt-title">إيصال دفع اشتراك</div>
           <div class="receipt-num">رقم: ${payment.receipt_number || payment.id.slice(-8).toUpperCase()}</div>
         </div>
@@ -5229,9 +5217,9 @@ window.Finance = Finance
 // ============================================================
 
 
-let _activities    = []
-let _students      = []
-let _currentActId  = null
+let _act_activities    = []
+let _act_students      = []
+let _act_currentActId  = null
 
 const ACTIVITY_TYPES = {
   competition: { label: 'مسابقة',  icon: '🏆', color: '#b7791f' },
@@ -5256,7 +5244,7 @@ const Activities = {
 
   async loadActivities() {
     try {
-      _activities = await activitiesApi.getAll()
+      _act_activities = await activitiesApi.getAll()
       this.renderCards()
       this.renderTable()
       this.updateStats()
@@ -5266,7 +5254,7 @@ const Activities = {
   },
 
   async loadStudents() {
-    _students = await studentsApi.getAll({ is_active: true })
+    _act_students = await studentsApi.getAll({ is_active: true })
   },
 
   // ===== رسم البطاقات =====
@@ -5274,7 +5262,7 @@ const Activities = {
     const container = document.getElementById('activities-cards')
     if (!container) return
 
-    const active = _activities.filter(a => a.status === 'active' || a.status === 'upcoming')
+    const active = _act_activities.filter(a => a.status === 'active' || a.status === 'upcoming')
     if (active.length === 0) {
       container.innerHTML = '<p class="empty-msg">لا توجد أنشطة نشطة حالياً</p>'
       return
@@ -5313,12 +5301,12 @@ const Activities = {
     const tbody = document.getElementById('activities-tbody')
     if (!tbody) return
 
-    if (_activities.length === 0) {
+    if (_act_activities.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="empty-row">لا توجد أنشطة أو مسابقات</td></tr>'
       return
     }
 
-    tbody.innerHTML = _activities.map((a, i) => {
+    tbody.innerHTML = _act_activities.map((a, i) => {
       const type   = ACTIVITY_TYPES[a.type] || ACTIVITY_TYPES.activity
       const status = STATUS_MAP[a.status]   || STATUS_MAP.upcoming
       const count  = a.activity_participants?.[0]?.count || 0
@@ -5355,11 +5343,11 @@ const Activities = {
 
   // ===== إحصائيات =====
   updateStats() {
-    setEl('stat-total-activities', _activities.length)
-    setEl('stat-active-activities', _activities.filter(a => a.status === 'active').length)
-    setEl('stat-completed-activities', _activities.filter(a => a.status === 'completed').length)
+    setEl('stat-total-activities', _act_activities.length)
+    setEl('stat-active-activities', _act_activities.filter(a => a.status === 'active').length)
+    setEl('stat-completed-activities', _act_activities.filter(a => a.status === 'completed').length)
 
-    const totalParticipants = _activities.reduce((s, a) =>
+    const totalParticipants = _act_activities.reduce((s, a) =>
       s + (a.activity_participants?.[0]?.count || 0), 0)
     setEl('stat-total-participants', totalParticipants)
   },
@@ -5375,8 +5363,8 @@ const Activities = {
     btn.textContent = 'جارٍ الحفظ...'
 
     try {
-      if (_currentActId) {
-        await activitiesApi.update(_currentActId, data)
+      if (_act_currentActId) {
+        await activitiesApi.update(_act_currentActId, data)
         showToast('✅ تم تحديث النشاط', 'success')
       } else {
         await activitiesApi.create(data)
@@ -5407,8 +5395,8 @@ const Activities = {
 
   // ===== مودال المشاركين =====
   async openParticipants(activityId) {
-    _currentActId = activityId
-    const activity = _activities.find(a => a.id === activityId)
+    _act_currentActId = activityId
+    const activity = _act_activities.find(a => a.id === activityId)
     const modal = document.getElementById('modal-participants')
     if (!modal) return
 
@@ -5422,7 +5410,7 @@ const Activities = {
       // قائمة إضافة مشاركين
       const addSel = document.getElementById('participant-student-add')
       if (addSel) {
-        const nonParticipants = _students.filter(s => !participantIds.has(s.id))
+        const nonParticipants = _act_students.filter(s => !participantIds.has(s.id))
         addSel.innerHTML = '<option value="">إضافة طالب...</option>' +
           nonParticipants.map(s => `<option value="${s.id}">${s.name}</option>`).join('')
       }
@@ -5491,7 +5479,7 @@ const Activities = {
 
   // ===== فتح/إغلاق المودالات =====
   openAddModal() {
-    _currentActId = null
+    _act_currentActId = null
     document.getElementById('form-activity')?.reset()
     setEl('modal-activity-title', 'إضافة نشاط أو مسابقة')
     // تاريخ اليوم افتراضياً
@@ -5502,9 +5490,9 @@ const Activities = {
   },
 
   openEdit(id) {
-    const act = _activities.find(a => a.id === id)
+    const act = _act_activities.find(a => a.id === id)
     if (!act) return
-    _currentActId = id
+    _act_currentActId = id
     setEl('modal-activity-title', 'تعديل النشاط')
     setField('act-title', act.title)
     setField('act-type', act.type)
@@ -5532,7 +5520,7 @@ const Activities = {
     const addParticipantBtn = document.getElementById('btn-add-participant')
     if (addParticipantBtn) {
       addParticipantBtn.addEventListener('click', () => {
-        if (_currentActId) this.addParticipant(_currentActId)
+        if (_act_currentActId) this.addParticipant(_act_currentActId)
       })
     }
   }
@@ -5554,26 +5542,26 @@ window.Activities = Activities
 // ============================================================
 
 
-let _settings  = {}
-let _students  = []
-let _currentReport = null
+let _gua_settings  = {}
+let _gua_students  = []
+let _gua_currentReport = null
 
 const Guardian = {
 
   async init() {
-    _settings = await settingsApi.getAll()
+    _gua_settings = await settingsApi.getAll()
     await this.loadStudentsList()
     this.bindEvents()
   },
 
   // ===== تحميل قائمة الطلاب =====
   async loadStudentsList() {
-    _students = await studentsApi.getAll({ is_active: true })
+    _gua_students = await studentsApi.getAll({ is_active: true })
     const sel = document.getElementById('guardian-student-select')
     if (!sel) return
 
     sel.innerHTML = '<option value="">— اختر الطالب —</option>' +
-      _students.map(s =>
+      _gua_students.map(s =>
         `<option value="${s.id}">${s.name}${s.circle_name ? ' | ' + s.circle_name : ''}</option>`
       ).join('')
   },
@@ -5609,8 +5597,8 @@ const Guardian = {
     if (actions) actions.style.display = 'none'
 
     try {
-      _currentReport = await reportsApi.getStudentReport(studentId)
-      this.renderPreview(_currentReport)
+      _gua_currentReport = await reportsApi.getStudentReport(studentId)
+      this.renderPreview(_gua_currentReport)
       if (actions) actions.style.display = 'flex'
     } catch (e) {
       preview.innerHTML = `<div class="error-state">خطأ في التحميل: ${e.message}</div>`
@@ -5634,7 +5622,7 @@ const Guardian = {
         <div class="report-header">
           <div class="report-logo">📖</div>
           <div class="report-org">
-            <div class="report-dar-name">${_settings.dar_name || 'دار الإمام مالك'}</div>
+            <div class="report-dar-name">${_gua_settings.dar_name || 'دار الإمام مالك'}</div>
             <div class="report-subtitle">تقرير متابعة الطالب</div>
           </div>
           <div class="report-date">
@@ -5746,8 +5734,8 @@ const Guardian = {
 
         <!-- تذييل -->
         <div class="report-footer-bar">
-          <span>${_settings.dar_name || 'دار الإمام مالك'}</span>
-          <span>${_settings.dar_phone || ''}</span>
+          <span>${_gua_settings.dar_name || 'دار الإمام مالك'}</span>
+          <span>${_gua_settings.dar_phone || ''}</span>
           <span>صادر بتاريخ: ${new Date().toLocaleDateString('ar-EG')}</span>
         </div>
       </div>
@@ -5759,18 +5747,18 @@ const Guardian = {
     if (preview) preview.innerHTML = '<div class="placeholder-state"><div class="placeholder-icon">📋</div><p>اختر الطالب لعرض تقريره</p></div>'
     const actions = document.getElementById('guardian-report-actions')
     if (actions) actions.style.display = 'none'
-    _currentReport = null
+    _gua_currentReport = null
   },
 
   // ===== تنزيل PDF =====
   async downloadPDF() {
-    if (!_currentReport) { showToast('اختر الطالب أولاً', 'error'); return }
+    if (!_gua_currentReport) { showToast('اختر الطالب أولاً', 'error'); return }
     const btn = document.getElementById('btn-download-pdf')
     btn.disabled = true
     btn.textContent = '⏳ جارٍ الإعداد...'
 
     try {
-      await generateStudentReport(_currentReport, _settings)
+      await generateStudentReport(_gua_currentReport, _gua_settings)
       showToast('✅ تم تنزيل التقرير بنجاح', 'success')
     } catch (e) {
       showToast('خطأ في إنشاء PDF: ' + e.message, 'error')
@@ -5782,17 +5770,17 @@ const Guardian = {
 
   // ===== مشاركة واتساب =====
   shareWhatsApp() {
-    if (!_currentReport) return
-    const { student } = _currentReport
+    if (!_gua_currentReport) return
+    const { student } = _gua_currentReport
     const phone = student.guardian_whatsapp || student.guardian_phone
     if (!phone) { showToast('لا يوجد رقم واتساب لولي الأمر', 'warning'); return }
 
-    const memorized = _currentReport.progress.filter(p => p.status === 'memorized').length
-    const rate = _currentReport.attendance.rate || 0
+    const memorized = _gua_currentReport.progress.filter(p => p.status === 'memorized').length
+    const rate = _gua_currentReport.attendance.rate || 0
 
     const msg = encodeURIComponent(
       `السلام عليكم ورحمة الله،\n\n` +
-      `هذا تقرير متابعة الطالب ${student.name} من ${_settings.dar_name || 'دار الإمام مالك'}:\n\n` +
+      `هذا تقرير متابعة الطالب ${student.name} من ${_gua_settings.dar_name || 'دار الإمام مالك'}:\n\n` +
       `📖 السور المحفوظة: ${memorized} سورة\n` +
       `✅ نسبة الحضور: ${rate}%\n\n` +
       `جزاكم الله خيراً على متابعتكم الكريمة.`
@@ -5812,9 +5800,9 @@ window.Guardian = Guardian
 // يومية / أسبوعية / شهرية
 // ============================================================
 
-         attendanceApi, paymentsApi, activitiesApi, settingsApi } from '../lib/api.js'
+// (import removed)
 
-let _settings = {}
+let _rep_settings = {}
 
 const Reports = {
 
@@ -5828,7 +5816,7 @@ const Reports = {
         </div>`
       return
     }
-    _settings = await settingsApi.getAll()
+    _rep_settings = await settingsApi.getAll()
     this.setDefaultDates()
     this.bindEvents()
     await this.loadSummaryReport()
@@ -5921,7 +5909,7 @@ const Reports = {
     const ratings = { excellent:0, good:0, acceptable:0, weak:0 }
     recitations.forEach(r => ratings[r.rating] = (ratings[r.rating]||0)+1)
 
-    const darName = _settings.dar_name || 'دار الإمام مالك'
+    const darName = _rep_settings.dar_name || 'دار الإمام مالك'
 
     container.innerHTML = `
       <div id="report-printable">
@@ -5997,7 +5985,7 @@ const Reports = {
             </div>
             <div class="finance-summary-row" style="border-top:1px solid #eee;padding-top:8px;margin-top:4px;">
               <span>الرسوم الشهرية الحالية</span>
-              <strong>${parseFloat(_settings.subscription_fee||0).toLocaleString('ar-EG')} ج.م.</strong>
+              <strong>${parseFloat(_rep_settings.subscription_fee||0).toLocaleString('ar-EG')} ج.م.</strong>
             </div>
             <div class="finance-summary-row">
               <span>نسبة التحصيل</span>
@@ -6022,7 +6010,7 @@ const Reports = {
     container.innerHTML = `
       <div id="report-printable">
         <div class="report-print-header">
-          <div class="rph-title">${_settings.dar_name||'دار الإمام مالك'}</div>
+          <div class="rph-title">${_rep_settings.dar_name||'دار الإمام مالك'}</div>
           <div class="rph-sub">تقرير الطلاب التفصيلي</div>
           <div class="rph-period">بتاريخ: ${new Date().toLocaleDateString('ar-EG')}</div>
         </div>
@@ -6071,7 +6059,7 @@ const Reports = {
     container.innerHTML = `
       <div id="report-printable">
         <div class="report-print-header">
-          <div class="rph-title">${_settings.dar_name||'دار الإمام مالك'}</div>
+          <div class="rph-title">${_rep_settings.dar_name||'دار الإمام مالك'}</div>
           <div class="rph-sub">تقرير الحضور والغياب</div>
           <div class="rph-period">آخر 90 يوم</div>
         </div>
@@ -6128,7 +6116,7 @@ const Reports = {
     container.innerHTML = `
       <div id="report-printable">
         <div class="report-print-header">
-          <div class="rph-title">${_settings.dar_name||'دار الإمام مالك'}</div>
+          <div class="rph-title">${_rep_settings.dar_name||'دار الإمام مالك'}</div>
           <div class="rph-sub">تقرير التسميع التفصيلي</div>
           <div class="rph-period">${formatDate(from)} — ${formatDate(to)}</div>
         </div>
@@ -6203,7 +6191,7 @@ const Reports = {
     container.innerHTML = `
       <div id="report-printable">
         <div class="report-print-header">
-          <div class="rph-title">${_settings.dar_name||'دار الإمام مالك'}</div>
+          <div class="rph-title">${_rep_settings.dar_name||'دار الإمام مالك'}</div>
           <div class="rph-sub">التقرير المالي</div>
           <div class="rph-period">${formatDate(from)} — ${formatDate(to)}</div>
         </div>
@@ -6250,7 +6238,7 @@ const Reports = {
     container.innerHTML = `
       <div id="report-printable">
         <div class="report-print-header">
-          <div class="rph-title">${_settings.dar_name||'دار الإمام مالك'}</div>
+          <div class="rph-title">${_rep_settings.dar_name||'دار الإمام مالك'}</div>
           <div class="rph-sub">تقرير أداء المعلمين</div>
           <div class="rph-period">بتاريخ: ${new Date().toLocaleDateString('ar-EG')}</div>
         </div>
@@ -6349,8 +6337,8 @@ window.Reports = Reports
 // ============================================================
 
 
-let _users = []
-let _editId = null
+let _use_users = []
+let _use_editId = null
 
 const Users = {
 
@@ -6380,8 +6368,8 @@ const Users = {
         .order('created_at')
       if (error) throw error
 
-      _users = data || []
-      this.renderTable(_users)
+      _use_users = data || []
+      this.renderTable(_use_users)
     } catch (e) {
       tbody.innerHTML = `<tr><td colspan="6" class="empty-row error">${e.message}</td></tr>`
     }
@@ -6434,7 +6422,7 @@ const Users = {
 
   // ===== فتح مودال الإضافة =====
   openAddModal() {
-    _editId = null
+    _use_editId = null
     document.getElementById('form-user').reset()
     document.getElementById('modal-user-title').textContent = 'إضافة مستخدم جديد'
     document.getElementById('user-password-group').style.display = 'block'
@@ -6443,9 +6431,9 @@ const Users = {
 
   // ===== فتح مودال التعديل =====
   openEditModal(id) {
-    const user = _users.find(u => u.id === id)
+    const user = _use_users.find(u => u.id === id)
     if (!user) return
-    _editId = id
+    _use_editId = id
 
     document.getElementById('modal-user-title').textContent = 'تعديل المستخدم'
     document.getElementById('user-password-group').style.display = 'none'
@@ -6468,9 +6456,9 @@ const Users = {
     btn.textContent = 'جارٍ الحفظ...'
 
     try {
-      if (_editId) {
+      if (_use_editId) {
         // تحديث بيانات موجودة
-        await updateUser(_editId, {
+        await updateUser(_use_editId, {
           full_name: data.full_name,
           role:      data.role,
           phone:     data.phone || null
@@ -6519,7 +6507,7 @@ const Users = {
 
   // ===== إعادة تعيين كلمة المرور =====
   async resetPassword(userId) {
-    const user = _users.find(u => u.id === userId)
+    const user = _use_users.find(u => u.id === userId)
     if (!user) return
     showToast('يجب الحصول على البريد الإلكتروني من Supabase Dashboard لإعادة تعيين كلمة المرور', 'info')
   },
