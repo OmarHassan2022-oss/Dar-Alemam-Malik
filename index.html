@@ -1154,16 +1154,20 @@ const APP = {
   },
 
   // ── Login ──────────────────────────────────────────────────
-  showLogin() {
+  showLogin(msg, type='error') {
     document.body.className = 'login-mode';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('app-screen').style.display   = 'none';
+    if (msg) setTimeout(() => this.loginMsg(msg, type), 50);
   },
 
   loginMsg(text, type='error') {
     const el = document.getElementById('l-msg');
+    if (!el) return;
     el.textContent = text;
-    el.className = 'l-msg show ' + type;
+    // Map to CSS class names
+    const cls = {error:'err', success:'ok', warn:'warn', ok:'ok', err:'err'}[type] || 'err';
+    el.className = 'l-msg show ' + cls;
   },
 
   async login() {
@@ -1175,7 +1179,7 @@ const APP = {
     const btn = document.getElementById('l-btn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spin"></span> جارٍ تسجيل الدخول...';
-    document.getElementById('l-msg').className = 'l-msg';
+    const msgEl = document.getElementById('l-msg'); if(msgEl){ msgEl.className='l-msg'; msgEl.textContent=''; }
 
     try {
       const { data, error } = await DB.auth.signInWithPassword({ email, password: pass });
@@ -1212,10 +1216,40 @@ const APP = {
 
   // ── After login ────────────────────────────────────────────
   async afterLogin(user) {
-    // Load profile
-    const { data: prof } = await DB.from('profiles').select('*').eq('id', user.id).single();
-    if (!prof) { await DB.auth.signOut(); this.showLogin('لا يوجد ملف شخصي'); return; }
-    if (!prof.is_active) { await DB.auth.signOut(); this.showLogin('الحساب معطّل'); return; }
+    // Load profile — with detailed error reporting
+    const { data: prof, error: profErr } = await DB.from('profiles')
+      .select('*').eq('id', user.id).single();
+
+    if (profErr || !prof) {
+      console.error('Profile load error:', profErr);
+      // Try to create profile automatically if it doesn't exist
+      if (profErr?.code === 'PGRST116') { // row not found
+        const { error: insErr } = await DB.from('profiles').insert({
+          id: user.id,
+          full_name: user.email.split('@')[0],
+          role: 'admin_general',
+          is_active: true
+        });
+        if (insErr) {
+          await DB.auth.signOut();
+          this.showLogin('خطأ في تحميل الملف الشخصي: ' + (profErr?.message || 'غير معروف') + ' — تأكد من تشغيل fix_user_creation.sql');
+          return;
+        }
+        // Retry
+        const { data: prof2 } = await DB.from('profiles').select('*').eq('id', user.id).single();
+        if (!prof2) { await DB.auth.signOut(); this.showLogin('فشل إنشاء الملف الشخصي — شغّل fix_user_creation.sql'); return; }
+        return this.afterLogin(user);
+      }
+      await DB.auth.signOut();
+      this.showLogin('خطأ في الصلاحيات: ' + (profErr?.message || 'تأكد من تشغيل fix_user_creation.sql'));
+      return;
+    }
+
+    if (!prof.is_active) {
+      await DB.auth.signOut();
+      this.showLogin('الحساب معطّل — تواصل مع مدير النظام');
+      return;
+    }
 
     this._profile = prof;
 
