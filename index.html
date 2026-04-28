@@ -493,45 +493,89 @@ tbody tr:hover td{background:var(--card2)}
     <p class="ps" id="dash-date"></p></div>
   </div>
 
-  <div class="qb">
-    <div style="color:#4ade80;font-size:18px;opacity:.7;margin-bottom:8px">❧ ✦ ❧</div>
-    <div class="qb-v">﴿ إِنَّا نَحْنُ نَزَّلْنَا الذِّكْرَ وَإِنَّا لَهُ لَحَافِظُونَ ﴾</div>
+  <!-- Quran Banner -->
+  <div class="qb" style="margin-bottom:16px">
+    <div style="color:#4ade80;font-size:16px;opacity:.6;margin-bottom:6px">❧ ✦ ❧</div>
+    <div class="qb-v" style="font-size:22px">﴿ إِنَّا نَحْنُ نَزَّلْنَا الذِّكْرَ وَإِنَّا لَهُ لَحَافِظُونَ ﴾</div>
     <div class="qb-r">سورة الحجر — الآية 9</div>
   </div>
 
+  <!-- Header Stats Bar (like screenshot) -->
+  <div style="background:linear-gradient(135deg,#16a34a,#15803d);border-radius:var(--r2);
+    padding:16px 24px;margin-bottom:18px;display:flex;align-items:center;
+    justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px 14px;text-align:center">
+        <div style="color:white;font-size:18px;font-weight:700" id="dash-date-short"></div>
+        <div style="color:rgba(255,255,255,.7);font-size:11px" id="dash-hijri">—</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <div style="text-align:center">
+        <div style="color:white;font-size:22px;font-weight:700" id="st-rec">—</div>
+        <div style="color:rgba(255,255,255,.75);font-size:12px">تسميعات اليوم</div>
+      </div>
+      <div style="text-align:center">
+        <div style="color:white;font-size:22px;font-weight:700" id="st-present">—</div>
+        <div style="color:rgba(255,255,255,.75);font-size:12px">حاضرون اليوم</div>
+      </div>
+      <div style="text-align:center admin-only">
+        <div style="color:#fde047;font-size:22px;font-weight:700" id="st-revenue">—</div>
+        <div style="color:rgba(255,255,255,.75);font-size:12px">إيرادات الشهر</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
   <div class="sg">
-    <div class="sc"><div class="si si-g">👥</div><div>
-      <div class="sl">الطلاب</div>
-      <div class="sv" id="st-students">—</div>
-      <div class="ss">طالب نشط</div></div></div>
-    <div class="sc"><div class="si si-b">📖</div><div>
-      <div class="sl">المحفظون</div>
-      <div class="sv" id="st-teachers">—</div>
-      <div class="ss">معلم</div></div></div>
-    <div class="sc"><div class="si si-p">🕌</div><div>
-      <div class="sl">الحلقات</div>
-      <div class="sv" id="st-circles">—</div>
-      <div class="ss">حلقة نشطة</div></div></div>
-    <div class="sc"><div class="si si-t">✅</div><div>
-      <div class="sl">حاضرون اليوم</div>
-      <div class="sv" id="st-present">—</div>
-      <div class="ss">طالب</div></div></div>
-    <div class="sc"><div class="si si-o">📝</div><div>
-      <div class="sl">تسميعات اليوم</div>
-      <div class="sv" id="st-rec">—</div>
-      <div class="ss">جلسة</div></div></div>
-    <div class="sc admin-only" style="display:none"><div class="si si-gold">💰</div><div>
-      <div class="sl">إيرادات الشهر</div>
-      <div class="sv" id="st-revenue" style="font-size:18px">—</div>
-      <div class="ss">ج.م.</div></div></div>
-    <div class="sc admin-only" style="display:none"><div class="si si-r">⏳</div><div>
-      <div class="sl">مدفوعات معلقة</div>
-      <div class="sv" id="st-pending" style="font-size:18px">—</div>
-      <div class="ss">ج.م.</div></div></div>
-    <div class="sc"><div class="si si-g">🏆</div><div>
-      <div class="sl">إجمالي الحفظ</div>
-      <div class="sv" id="st-surahs">—</div>
-      <div class="ss">سورة محفوظة</div></div></div>
+    <div class="sc">
+      <div class="si si-g" style="font-size:20px">👥</div>
+      <div><div class="sl">الطلاب</div>
+        <div class="sv" id="st-students">—</div>
+        <div class="ss">طالب نشط</div></div>
+    </div>
+    <div class="sc">
+      <div class="si si-b" style="font-size:20px">👨‍🏫</div>
+      <div><div class="sl">المحفظون</div>
+        <div class="sv" id="st-teachers">—</div>
+        <div class="ss">معلم</div></div>
+    </div>
+    <div class="sc">
+      <div class="si si-p" style="font-size:20px">🕌</div>
+      <div><div class="sl">الحلقات</div>
+        <div class="sv" id="st-circles">—</div>
+        <div class="ss">حلقة نشطة</div></div>
+    </div>
+    <div class="sc">
+      <div class="si si-gold" style="font-size:20px">📖</div>
+      <div><div class="sl">السور المحفوظة</div>
+        <div class="sv" id="st-surahs">—</div>
+        <div class="ss">سورة</div></div>
+    </div>
+    <div class="sc">
+      <div class="si si-t" style="font-size:20px">📊</div>
+      <div><div class="sl">نسبة الحضور</div>
+        <div class="sv" id="st-att-rate">—</div>
+        <div class="ss">هذا الشهر</div></div>
+    </div>
+    <div class="sc admin-only" style="display:none">
+      <div class="si si-r" style="font-size:20px">⏳</div>
+      <div><div class="sl">مدفوعات معلقة</div>
+        <div class="sv" id="st-pending" style="font-size:18px">—</div>
+        <div class="ss">ج.م.</div></div>
+    </div>
+    <div class="sc">
+      <div class="si si-o" style="font-size:20px">🏆</div>
+      <div><div class="sl">إجمالي الأنشطة</div>
+        <div class="sv" id="st-acts">—</div>
+        <div class="ss">نشاط</div></div>
+    </div>
+    <div class="sc">
+      <div class="si si-g" style="font-size:20px">🎖️</div>
+      <div><div class="sl">الشهادات</div>
+        <div class="sv" id="st-certs">—</div>
+        <div class="ss">شهادة صادرة</div></div>
+    </div>
   </div>
 
   <div class="dg">
@@ -1014,7 +1058,7 @@ tbody tr:hover td{background:var(--card2)}
           <div class="fg"><label>الاسم <span class="req">*</span></label><input class="fi" name="name" required/></div>
           <div class="fg"><label>المؤهل</label><input class="fi" name="qualification"/></div>
           <div class="fg"><label>الهاتف</label><input class="fi" name="phone" type="tel" dir="ltr"/></div>
-          <div class="fg"><label>البريد</label><input class="fi" name="email" type="email" dir="ltr"/></div>
+
         </div>
         <div class="mf" style="padding:0;border:none;background:none">
           <button type="button" class="btn btn-g" onclick="TCH.closeModal()">إلغاء</button>
@@ -1074,9 +1118,9 @@ tbody tr:hover td{background:var(--card2)}
           <select class="fi" name="student_id" id="cert-stu-sel" required></select></div>
         <div class="fg2">
           <div class="fg"><label>نوع الشهادة</label>
-            <select class="fi" name="cert_type">
-              <option value="hifz">شهادة حفظ</option><option value="muraja3a">شهادة مراجعة</option>
-              <option value="excellence">شهادة تميز</option><option value="attendance">شهادة انتظام</option>
+            <select class="fi" name="type">
+              <option value="juz_completion">إتمام جزء</option><option value="quran_completion">إتمام القرآن</option>
+              <option value="excellence">شهادة تميز</option><option value="participation">شهادة مشاركة</option>
             </select></div>
           <div class="fg"><label>تاريخ الإصدار</label>
             <input class="fi" name="issue_date" type="date"/></div>
@@ -1115,7 +1159,7 @@ tbody tr:hover td{background:var(--card2)}
   <div class="ph"><div><h2 class="pt">الإشعارات والإعلانات</h2></div>
     <button class="btn btn-p" onclick="ANN.openAdd()">+ إضافة إعلان</button></div>
   <div class="tw">
-    <table><thead><tr><th>#</th><th>العنوان</th><th>النوع</th><th>التاريخ</th><th>ينتهي</th><th>إجراءات</th></tr></thead>
+    <table><thead><tr><th>#</th><th>العنوان</th><th>النوع</th><th>تاريخ النشر</th><th>المستهدف</th><th>إجراءات</th></tr></thead>
     <tbody id="ann-tbody"><tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr></tbody></table>
   </div>
   <div id="ann-modal" class="mo" style="display:none" onclick="if(event.target===this)ANN.closeModal()">
@@ -1168,7 +1212,7 @@ tbody tr:hover td{background:var(--card2)}
 // ║  ضع مفاتيح Supabase في هذين السطرين فقط                ║
 // ╚══════════════════════════════════════════════════════════╝
  const SUPABASE_URL = 'https://sbzkxzsggtdovweozouf.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiemt4enNnZ3Rkb3Z3ZW96b3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MTU2ODcsImV4cCI6MjA5MjQ5MTY4N30.3f9xla0-ousPsUJy6UM7H0jo7JTylnImsjvCirqQBS0';
+ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiemt4enNnZ3Rkb3Z3ZW96b3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MTU2ODcsImV4cCI6MjA5MjQ5MTY4N30.3f9xla0-ousPsUJy6UM7H0jo7JTylnImsjvCirqQBS0';
 // ══════════════════════════════════════════════════════════
 
 'use strict';
@@ -1539,6 +1583,14 @@ const APP = {
 // ══ DASHBOARD ════════════════════════════════════════════════
 const DASH = {
   async load() {
+    // Set date in header bar
+    const now = new Date();
+    const dateShort = now.toLocaleDateString('ar-EG',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+    const el1 = document.getElementById('dash-date-short');
+    const el2 = document.getElementById('dash-hijri');
+    if (el1) el1.textContent = dateShort;
+    if (el2) el2.textContent = now.toLocaleDateString('ar-EG-u-ca-islamic',{year:'numeric',month:'long',day:'numeric'});
+
     try {
       const [{ count: students }, { count: teachers }, { count: circles }] = await Promise.all([
         DB.from('students').select('id',{count:'exact',head:true}).eq('is_active',true),
@@ -1563,6 +1615,20 @@ const DASH = {
       document.getElementById('st-circles').textContent  = circles||0;
       document.getElementById('st-present').textContent  = present||0;
       document.getElementById('st-rec').textContent      = recs||0;
+
+      // New stats
+      const { count: acts }  = await DB.from('activities').select('id',{count:'exact',head:true}).eq('status','active');
+      const { count: certs } = await DB.from('certificates').select('id',{count:'exact',head:true});
+      const el3 = document.getElementById('st-acts');  if(el3) el3.textContent = acts||0;
+      const el4 = document.getElementById('st-certs'); if(el4) el4.textContent = certs||0;
+
+      // Attendance rate this month
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const { data: attM } = await DB.from('attendance').select('status').gte('session_date', monthStart);
+      if (attM?.length) {
+        const rate = Math.round(attM.filter(a=>a.status==='present').length / attM.length * 100);
+        const el5 = document.getElementById('st-att-rate'); if(el5) el5.textContent = rate+'%';
+      }
 
       if (isAdmin()) {
         const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
@@ -1840,225 +1906,26 @@ const CIR = {
 
   async save(e) {
     e.preventDefault();
-    const d = getForm('cir-form');
-    if (!d.teacher_id) delete d.teacher_id;
+    const raw = getForm('cir-form');
+    const d = {
+      name: raw.name,
+      type: raw.type || 'hifz',
+      location: raw.location || null,
+      max_students: parseInt(raw.max_students) || 15,
+    };
+    if (raw.teacher_id) d.teacher_id = raw.teacher_id;
     try {
-      if (this._id) {
-        const { error } = await DB.from('circles').update(d).eq('id',this._id);
-        if (error) throw error;
-      } else {
-        const { error } = await DB.from('circles').insert({...d, is_active:true});
-        if (error) throw error;
-      }
-      toast('✅ تم الحفظ', 'success');
-      this.closeModal();
-      await this.load();
-    } catch(err) { toast(err.message, 'error'); }
-  }
-};
-
-// ══ RECITATIONS ══════════════════════════════════════════════
-const REC = {
-  _data: [], _id: null,
-
-  async load() {
-    const tbody = document.getElementById('rec-tbody2');
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">جارٍ التحميل...</td></tr>';
-
-    // Set default date
-    const dateEl = document.getElementById('rec-date');
-    if (!dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
-
-    const date = dateEl.value || new Date().toISOString().split('T')[0];
-
-    // Load circles filter
-    const { data: circles } = await DB.from('circles').select('id,name').eq('is_active',true).order('name');
-    const circlesSel = document.getElementById('rec-circle');
-    if (circlesSel.children.length <= 1) {
-      circlesSel.innerHTML = '<option value="">جميع الحلقات</option>' +
-        (circles||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+      const result = this._id
+        ? await DB.from('circles').update(d).eq('id', this._id)
+        : await DB.from('circles').insert({...d, is_active:true});
+      if (result.error) throw result.error;
+      toast('✅ تم حفظ الحلقة', 'success');
+      this.closeModal(); await this.load();
+    } catch(err) {
+      toast('خطأ في حفظ الحلقة: ' + (err.message||JSON.stringify(err)), 'error');
     }
-
-    let q = DB.from('recitations')
-      .select('*,students(name,circle_id)')
-      .gte('session_date', date+'T00:00:00')
-      .lte('session_date', date+'T23:59:59')
-      .order('created_at',{ascending:false});
-
-    const cid = document.getElementById('rec-circle').value;
-    const search = document.getElementById('rec-search').value.toLowerCase();
-
-    const { data, error } = await q;
-    if (error) { tbody.innerHTML=`<tr><td colspan="7" class="empty">${error.message}</td></tr>`; return; }
-
-    let rows = data||[];
-    if (cid) rows = rows.filter(r=>r.students?.circle_id===cid);
-    if (search) rows = rows.filter(r=>(r.students?.name||'').toLowerCase().includes(search));
-
-    this._data = rows;
-    tbody.innerHTML = !rows.length
-      ? '<tr><td colspan="7" class="empty">لا توجد تسميعات</td></tr>'
-      : rows.map((r,i)=>`
-        <tr>
-          <td class="tn">${i+1}</td>
-          <td>${r.students?.name||'—'}</td>
-          <td><span class="sb2">${r.surah_number}</span>سورة ${r.surah_name}
-            <span class="cs"> (${r.verse_from||1}–${r.verse_to||''})</span></td>
-          <td><span class="badge bg-in">${r.type==='new_memorization'?'حفظ جديد':'مراجعة'}</span></td>
-          <td><span class="badge bg-${r.rating}">${RATING_AR[r.rating]||r.rating}</span></td>
-          <td class="td">${fmtDate(r.session_date)}</td>
-          <td><button class="ib" onclick="REC.del('${r.id}')" title="حذف">🗑️</button></td>
-        </tr>`).join('');
-  },
-
-  filter() { this.load(); },
-
-  async openAdd() {
-    this._id = null;
-    document.getElementById('rec-form').reset();
-    document.querySelector('#rec-form [name=session_date]').value = new Date().toISOString().split('T')[0];
-
-    // Load students
-    const { data: stus } = await DB.from('students').select('id,name').eq('is_active',true).order('name');
-    const sel = document.getElementById('rec-stu-sel');
-    sel.innerHTML = '<option value="">— اختر طالباً —</option>' +
-      (stus||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-
-    // Load surahs
-    const ssel = document.getElementById('rec-surah-sel');
-    ssel.innerHTML = SURAHS_LIST.map(s=>`<option value="${s.n}">${s.n}. سورة ${s.name}</option>`).join('');
-
-    document.getElementById('rec-modal').style.display = 'flex';
-  },
-
-  closeModal() { document.getElementById('rec-modal').style.display='none'; },
-
-  async save(e) {
-    e.preventDefault();
-    const d = getForm('rec-form');
-    const surah = SURAHS_LIST.find(s=>s.n==d.surah_number);
-    d.surah_name = surah?.name || '';
-    d.verse_to = d.verse_to || surah?.v;
-    try {
-      const { error } = await DB.from('recitations').insert(d);
-      if (error) throw error;
-      toast('✅ تم تسجيل التسميع', 'success');
-      this.closeModal();
-      await this.load();
-    } catch(err) { toast(err.message, 'error'); }
-  },
-
-  async del(id) {
-    const ok = await CONF.ask('حذف هذا التسميع؟');
-    if (!ok) return;
-    await DB.from('recitations').delete().eq('id',id);
-    toast('تم الحذف', 'warn');
-    await this.load();
   }
 };
-
-// ══ ATTENDANCE ════════════════════════════════════════════════
-const ATT = {
-  _records: {},
-
-  async init() {
-    const dateEl = document.getElementById('att-date');
-    if (!dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
-
-    const { data: circles } = await DB.from('circles').select('id,name').eq('is_active',true).order('name');
-    const sel = document.getElementById('att-circle');
-    sel.innerHTML = '<option value="">جميع الحلقات</option>' +
-      (circles||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-
-    await this.load();
-  },
-
-  async load() {
-    const tbody = document.getElementById('att-tbody');
-    const date  = document.getElementById('att-date').value;
-    const cid   = document.getElementById('att-circle').value;
-    if (!date) return;
-
-    tbody.innerHTML = '<tr><td colspan="4" class="empty">جارٍ التحميل...</td></tr>';
-    this._records = {};
-
-    let q = DB.from('students').select('id,name,circle_id,circles(name)').eq('is_active',true).order('name');
-    if (cid) q = q.eq('circle_id', cid);
-    const { data: students } = await q;
-
-    // Load existing attendance for this date
-    const { data: existing } = await DB.from('attendance')
-      .select('*').eq('session_date', date)
-      .in('student_id', (students||[]).map(s=>s.id));
-
-    const attMap = {};
-    (existing||[]).forEach(a => { attMap[a.student_id] = a; });
-
-    if (!students?.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty">لا يوجد طلاب</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = students.map(s => {
-      const att = attMap[s.id];
-      const status = att?.status || 'present';
-      this._records[s.id] = { status, notes: att?.notes||'', att_id: att?.id||null, circle_id: s.circle_id };
-      const btns = ['present','absent','excused','late'].map(st =>
-        `<button class="st-btn s-${st}${status===st?' on':''}"
-          onclick="ATT.setStatus('${s.id}','${st}',this)">${{present:'✅ حاضر',absent:'❌ غائب',excused:'🟡 بعذر',late:'🕐 متأخر'}[st]}</button>`
-      ).join('');
-      return `<tr id="att-row-${s.id}">
-        <td><div class="ri"><div class="av-sm">${s.name.charAt(0)}</div>${s.name}</div></td>
-        <td>${s.circles?.name||'—'}</td>
-        <td><div class="status-btns">${btns}</div></td>
-        <td><input style="border:1px solid var(--b);border-radius:6px;padding:4px 8px;font-size:12px;background:var(--card);color:var(--tx);font-family:inherit;width:130px"
-          value="${att?.notes||''}"
-          onchange="ATT.setNotes('${s.id}',this.value)"
-          placeholder="ملاحظة..."/></td>
-      </tr>`;
-    }).join('');
-  },
-
-  setStatus(sid, status, btn) {
-    if (this._records[sid]) this._records[sid].status = status;
-    const row = document.getElementById('att-row-'+sid);
-    row?.querySelectorAll('.st-btn').forEach(b => b.classList.remove('on'));
-    btn.classList.add('on');
-  },
-
-  setNotes(sid, notes) {
-    if (this._records[sid]) this._records[sid].notes = notes;
-  },
-
-  markAll(status) {
-    Object.keys(this._records).forEach(sid => {
-      this._records[sid].status = status;
-      const row = document.getElementById('att-row-'+sid);
-      row?.querySelectorAll('.st-btn').forEach(b => {
-        b.classList.toggle('on', b.classList.contains('s-'+status));
-      });
-    });
-  },
-
-  async saveAll() {
-    const date = document.getElementById('att-date').value;
-    if (!date) { toast('اختر تاريخاً أولاً', 'warn'); return; }
-    try {
-      for (const [sid, rec] of Object.entries(this._records)) {
-        const row = { student_id:sid, circle_id:rec.circle_id,
-                      session_date:date, status:rec.status, notes:rec.notes||null };
-        if (rec.att_id) {
-          await DB.from('attendance').update({status:rec.status,notes:rec.notes||null}).eq('id',rec.att_id);
-        } else {
-          const { data: ins } = await DB.from('attendance').insert(row).select('id').single();
-          if (ins) this._records[sid].att_id = ins.id;
-        }
-      }
-      toast('✅ تم حفظ الحضور', 'success');
-    } catch(e) { toast(e.message, 'error'); }
-  }
-};
-
 // ══ ACTIVITIES ════════════════════════════════════════════════
 const ACT = {
   _data: [], _id: null,
@@ -2298,14 +2165,27 @@ const FIN = {
 
   async save(e) {
     e.preventDefault();
-    const d = getForm('fin-form');
-    d.currency = 'ج.م.';
+    const raw = getForm('fin-form');
+    // payment_month in DB is DATE, input type=month gives YYYY-MM
+    const d = {
+      student_id:    raw.student_id,
+      amount:        parseFloat(raw.amount),
+      currency:      'ج.م.',
+      payment_month: raw.payment_month ? raw.payment_month + '-01' : null,
+      payment_date:  raw.payment_date || null,
+      method:        raw.method || 'cash',
+      status:        raw.status || 'paid',
+    };
+    console.log('FIN.save:', d);
     try {
       const { error } = await DB.from('payments').insert(d);
       if (error) throw error;
       toast('✅ تم تسجيل الدفعة', 'success');
       this.closeModal(); await this.load();
-    } catch(err) { toast(err.message, 'error'); }
+    } catch(err) {
+      console.error('FIN.save error:', err);
+      toast('خطأ: ' + err.message, 'error');
+    }
   },
 
   async markPaid(id) {
@@ -2653,6 +2533,281 @@ const SET = {
 };
 
 // ══ START ══════════════════════════════════════════════════
+
+// ══ TEACHERS ═════════════════════════════════════════════════
+const TCH = {
+  _data: [], _id: null,
+  async load() {
+    const tbody = document.getElementById('tch-tbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr>';
+    const { data, error } = await DB.from('teachers')
+      .select('*').eq('is_active',true).order('name');
+    if (error) { tbody.innerHTML=`<tr><td colspan="6" class="empty">${error.message}</td></tr>`; return; }
+    this._data = data||[];
+    if (!this._data.length) { tbody.innerHTML='<tr><td colspan="6" class="empty">لا يوجد معلمون — أضف معلماً</td></tr>'; return; }
+    tbody.innerHTML = this._data.map((t,i)=>`<tr>
+      <td class="tn">${i+1}</td>
+      <td><div class="ri"><div class="av">${t.name.charAt(0)}</div>
+        <div><div class="cm">${t.name}</div><div class="cs">${t.phone||''}</div></div></div></td>
+      <td>${t.qualification||'—'}</td>
+      <td class="td" dir="ltr">${t.phone||'—'}</td>
+      <td>—</td>
+      <td><div class="ab">
+        <button class="ib" onclick="TCH.openEdit('${t.id}')" title="تعديل">✏️</button>
+        <button class="ib" onclick="TCH.del('${t.id}','${t.name}')" title="حذف">🗑️</button>
+      </div></td></tr>`).join('');
+  },
+  openAdd() {
+    this._id = null;
+    document.getElementById('tch-title').textContent = 'إضافة معلم';
+    document.getElementById('tch-form').reset();
+    document.getElementById('tch-modal').style.display = 'flex';
+  },
+  openEdit(id) {
+    this._id = id;
+    const t = this._data.find(x=>x.id===id); if (!t) return;
+    document.getElementById('tch-title').textContent = 'تعديل بيانات معلم';
+    const f = document.getElementById('tch-form');
+    ['name','qualification','phone'].forEach(k=>{
+      const el=f.querySelector(`[name=${k}]`); if (el) el.value=t[k]||'';
+    });
+    document.getElementById('tch-modal').style.display = 'flex';
+  },
+  closeModal() { document.getElementById('tch-modal').style.display='none'; },
+  async save(e) {
+    e.preventDefault();
+    const btn = document.getElementById('tch-save-btn');
+    btn.disabled=true; btn.textContent='جارٍ الحفظ...';
+    const raw = getForm('tch-form');
+    const d = { name: raw.name };
+    if (raw.qualification) d.qualification = raw.qualification;
+    if (raw.phone) d.phone = raw.phone;
+    try {
+      const result = this._id
+        ? await DB.from('teachers').update(d).eq('id',this._id)
+        : await DB.from('teachers').insert({...d, is_active:true});
+      if (result.error) throw result.error;
+      toast('✅ تم حفظ بيانات المعلم','success');
+      this.closeModal(); await this.load();
+    } catch(err) { toast('خطأ: '+err.message,'error'); }
+    finally { btn.disabled=false; btn.textContent='حفظ'; }
+  },
+  async del(id,name) {
+    const ok = await CONF.ask(`حذف المعلم "${name}"؟`); if (!ok) return;
+    await DB.from('teachers').update({is_active:false}).eq('id',id);
+    toast('تم الحذف','warn'); await this.load();
+  }
+};
+
+// ══ PROGRESS ══════════════════════════════════════════════════
+const PROG = {
+  _data: [], _id: null,
+  async init() {
+    const { data } = await DB.from('students').select('id,name').eq('is_active',true).order('name');
+    const sel = document.getElementById('prog-stu');
+    sel.innerHTML = '<option value="">— اختر طالباً —</option>'+
+      (data||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  },
+  async load() {
+    const sid = document.getElementById('prog-stu').value;
+    const status = document.getElementById('prog-status').value;
+    const tbody = document.getElementById('prog-tbody');
+    const summary = document.getElementById('prog-summary');
+    if (!sid) { tbody.innerHTML='<tr><td colspan="6" class="empty">اختر طالباً أولاً</td></tr>'; return; }
+    tbody.innerHTML='<tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr>';
+    let q = DB.from('memorization_progress').select('*').eq('student_id',sid).order('surah_number');
+    if (status) q = q.eq('status',status);
+    const { data,error } = await q;
+    if (error) { tbody.innerHTML=`<tr><td colspan="6" class="empty">${error.message}</td></tr>`; return; }
+    this._data = data||[];
+    const mem=this._data.filter(x=>x.status==='memorized').length;
+    const inp=this._data.filter(x=>x.status==='in_progress').length;
+    const rev=this._data.filter(x=>x.status==='reviewed').length;
+    summary.innerHTML = [
+      {lbl:'محفوظ',v:mem,c:'var(--P)'},{lbl:'قيد الحفظ',v:inp,c:'var(--gold)'},
+      {lbl:'مراجع',v:rev,c:'var(--blue)'},{lbl:'الإجمالي',v:this._data.length,c:'var(--tx)'}
+    ].map(x=>`<div style="background:var(--card);border:1px solid var(--b);border-radius:10px;
+      padding:12px 20px;text-align:center;flex:1">
+      <div style="font-size:22px;font-weight:700;color:${x.c}">${x.v}</div>
+      <div style="font-size:12px;color:var(--ts)">${x.lbl}</div></div>`).join('');
+    const statusAr={memorized:'✅ محفوظ',in_progress:'🔄 قيد الحفظ',reviewed:'🔵 مراجع'};
+    const statusBg={memorized:'bg-ok',in_progress:'bg-wa',reviewed:'bg-in'};
+    tbody.innerHTML = !this._data.length
+      ? '<tr><td colspan="6" class="empty">لا توجد سور مسجلة</td></tr>'
+      : this._data.map((p,i)=>`<tr>
+          <td class="tn">${i+1}</td>
+          <td class="cm">سورة ${p.surah_name}</td>
+          <td>${p.surah_number}</td>
+          <td><span class="badge ${statusBg[p.status]||'bg-wa'}">${statusAr[p.status]||p.status}</span></td>
+          <td class="td">${fmtDate(p.completion_date)}</td>
+          <td><button class="ib" onclick="PROG.del('${p.id}')" title="حذف">🗑️</button></td>
+        </tr>`).join('');
+  },
+  async openAdd() {
+    document.getElementById('prog-form').reset();
+    const { data: stus } = await DB.from('students').select('id,name').eq('is_active',true).order('name');
+    document.getElementById('prog-stu-sel').innerHTML =
+      '<option value="">— اختر طالباً —</option>'+
+      (stus||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    document.getElementById('prog-surah-sel').innerHTML =
+      SURAHS_LIST.map(s=>`<option value="${s.n}">${s.n}. سورة ${s.name}</option>`).join('');
+    document.getElementById('prog-modal').style.display='flex';
+  },
+  closeModal() { document.getElementById('prog-modal').style.display='none'; },
+  async save(e) {
+    e.preventDefault();
+    const raw = getForm('prog-form');
+    const surah = SURAHS_LIST.find(s=>s.n==raw.surah_number);
+    const d = {
+      student_id:       raw.student_id,
+      surah_number:     parseInt(raw.surah_number),
+      surah_name:       surah?.name||'',
+      status:           raw.status||'in_progress',
+      completion_date:  raw.completion_date||null,
+    };
+    if (!d.completion_date) delete d.completion_date;
+    try {
+      const { error } = await DB.from('memorization_progress')
+        .upsert(d,{onConflict:'student_id,surah_number'});
+      if (error) throw error;
+      toast('✅ تم التسجيل','success');
+      this.closeModal();
+      document.getElementById('prog-stu').value = d.student_id;
+      await this.load();
+    } catch(err) { toast('خطأ: '+err.message,'error'); }
+  },
+  async del(id) {
+    const ok = await CONF.ask('حذف هذا السجل؟'); if (!ok) return;
+    await DB.from('memorization_progress').delete().eq('id',id);
+    toast('تم الحذف','warn'); await this.load();
+  }
+};
+
+// ══ CERTIFICATES ══════════════════════════════════════════════
+const CERT = {
+  _data: [],
+  _typeLabels: {juz_completion:'إتمام جزء',quran_completion:'إتمام القرآن',excellence:'شهادة تميز',participation:'شهادة مشاركة'},
+  async load() {
+    const tbody = document.getElementById('cert-tbody');
+    tbody.innerHTML='<tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr>';
+    const { data,error } = await DB.from('certificates')
+      .select('*,students(name)').order('issue_date',{ascending:false});
+    if (error) { tbody.innerHTML=`<tr><td colspan="6" class="empty">خطأ: ${error.message}</td></tr>`; return; }
+    this._data = data||[];
+    tbody.innerHTML = !this._data.length
+      ? '<tr><td colspan="6" class="empty">لا توجد شهادات</td></tr>'
+      : this._data.map((cert,i)=>`<tr>
+          <td class="tn">${i+1}</td>
+          <td class="cm">${cert.students?.name||'—'}</td>
+          <td><span class="badge bg-ok">${this._typeLabels[cert.type]||cert.type}</span></td>
+          <td style="font-size:12px;color:var(--ts);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cert.description||'—'}</td>
+          <td class="td">${fmtDate(cert.issue_date)}</td>
+          <td><div class="ab">
+            <button class="ib" onclick="CERT.print('${cert.id}')" title="طباعة">🖨️</button>
+            <button class="ib" onclick="CERT.del('${cert.id}')" title="حذف">🗑️</button>
+          </div></td></tr>`).join('');
+  },
+  async openAdd() {
+    document.getElementById('cert-form').reset();
+    document.querySelector('#cert-form [name=issue_date]').value = new Date().toISOString().split('T')[0];
+    const { data } = await DB.from('students').select('id,name').eq('is_active',true).order('name');
+    document.getElementById('cert-stu-sel').innerHTML =
+      '<option value="">— اختر طالباً —</option>'+
+      (data||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    document.getElementById('cert-modal').style.display='flex';
+  },
+  closeModal() { document.getElementById('cert-modal').style.display='none'; },
+  async save(e) {
+    e.preventDefault();
+    const raw = getForm('cert-form');
+    const d = {
+      student_id:  raw.student_id,
+      type:        raw.type||'juz_completion',
+      description: raw.description||null,
+      issue_date:  raw.issue_date||new Date().toISOString().split('T')[0],
+    };
+    try {
+      const { error } = await DB.from('certificates').insert(d);
+      if (error) throw error;
+      toast('✅ تم إصدار الشهادة','success');
+      this.closeModal(); await this.load();
+    } catch(err) { toast('خطأ: '+err.message,'error'); }
+  },
+  async del(id) {
+    const ok = await CONF.ask('حذف هذه الشهادة؟'); if (!ok) return;
+    await DB.from('certificates').delete().eq('id',id);
+    toast('تم الحذف','warn'); await this.load();
+  },
+  async print(id) {
+    const cert = this._data.find(x=>x.id===id); if (!cert) return;
+    const dar = APP._settings.dar_name||'دار الإمام مالك';
+    const title = this._typeLabels[cert.type]||'شهادة';
+    const date = cert.issue_date ? new Date(cert.issue_date).toLocaleDateString('ar-EG',{year:'numeric',month:'long',day:'numeric'}) : '';
+    document.getElementById('cert-org-name').textContent = dar;
+    document.getElementById('cert-heading').textContent  = title;
+    document.getElementById('cert-body').innerHTML =
+      `يُشهد بأن الطالب / الطالبة<br/><strong style="font-size:20px;color:#1a6b3a">${cert.students?.name||''}</strong><br/>${cert.description||''}`;
+    document.getElementById('cert-date-text').innerHTML = `التاريخ<br/><br/><strong>${date}</strong>`;
+    document.getElementById('cert-print').style.display='block';
+    setTimeout(()=>{ window.print(); document.getElementById('cert-print').style.display='none'; },300);
+  }
+};
+
+// ══ ANNOUNCEMENTS ═════════════════════════════════════════════
+const ANN = {
+  _data: [],
+  _typeLabels: {announcement:'إعلان عام',reminder:'تذكير',event:'حدث',holiday:'إجازة',info:'معلومة',warning:'تحذير'},
+  _typeBadge:  {announcement:'bg-in',reminder:'bg-wa',event:'bg-ok',holiday:'bg-no',info:'bg-in',warning:'bg-wa'},
+  async load() {
+    const tbody = document.getElementById('ann-tbody');
+    tbody.innerHTML='<tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr>';
+    const { data,error } = await DB.from('notifications')
+      .select('*').is('target_user_id',null).order('created_at',{ascending:false});
+    if (error) { tbody.innerHTML=`<tr><td colspan="6" class="empty">خطأ: ${error.message}</td></tr>`; return; }
+    this._data = data||[];
+    tbody.innerHTML = !this._data.length
+      ? '<tr><td colspan="6" class="empty">لا توجد إعلانات</td></tr>'
+      : this._data.map((a,i)=>`<tr>
+          <td class="tn">${i+1}</td>
+          <td><div class="cm">${a.title}</div>
+            <div class="cs" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.body||''}</div></td>
+          <td><span class="badge ${this._typeBadge[a.type]||'bg-in'}">${this._typeLabels[a.type]||a.type}</span></td>
+          <td class="td">${fmtDate(a.created_at)}</td>
+          <td>${a.target_role||'الجميع'}</td>
+          <td><div class="ab">
+            <button class="ib" onclick="ANN.del('${a.id}')" title="حذف">🗑️</button>
+          </div></td></tr>`).join('');
+  },
+  openAdd() {
+    document.getElementById('ann-modal-title').textContent='إضافة إعلان';
+    document.getElementById('ann-form').reset();
+    document.getElementById('ann-modal').style.display='flex';
+  },
+  closeModal() { document.getElementById('ann-modal').style.display='none'; },
+  async save(e) {
+    e.preventDefault();
+    const raw = getForm('ann-form');
+    const d = {
+      title:       raw.title,
+      body:        raw.content||raw.body||null,
+      type:        raw.type==='announcement'?'info': raw.type==='holiday'?'warning': raw.type||'info',
+      target_role: raw.target_role||null,
+      is_read:     false,
+    };
+    try {
+      const { error } = await DB.from('notifications').insert(d);
+      if (error) throw error;
+      toast('✅ تم نشر الإعلان','success');
+      this.closeModal(); await this.load();
+    } catch(err) { toast('خطأ: '+err.message,'error'); }
+  },
+  async del(id) {
+    const ok = await CONF.ask('حذف هذا الإعلان؟'); if (!ok) return;
+    await DB.from('notifications').delete().eq('id',id);
+    toast('تم الحذف','warn'); await this.load();
+  }
+};
+
 APP.boot();
 </script>
 </body>
