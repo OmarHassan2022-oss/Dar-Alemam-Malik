@@ -1398,44 +1398,201 @@ tbody tr:hover td{background:var(--card2)}
 <!-- ════════════════ USERS ════════════════ -->
 <div id="sec-users" class="sec">
   <div class="ph">
-    <div><h2 class="pt">المستخدمون والصلاحيات</h2></div>
-    <button class="btn btn-p" onclick="USR.openAdd()">+ إضافة مستخدم</button>
+    <div>
+      <h2 class="pt">👤 إدارة الحسابات والصلاحيات</h2>
+      <p class="ps">إنشاء وإدارة حسابات المعلمين والمشرفين ومديري النظام</p>
+    </div>
+    <button class="btn btn-p" onclick="USR.openAdd()">+ إضافة حساب جديد</button>
   </div>
+
+  <!-- بطاقات الأدوار -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px" id="usr-role-cards">
+    <div class="sc" style="cursor:pointer" onclick="USR.filterRole('')">
+      <div class="si si-b">👥</div>
+      <div><div class="sl">الكل</div><div class="sv" id="urc-all">—</div></div>
+    </div>
+    <div class="sc" style="cursor:pointer" onclick="USR.filterRole('admin_general')">
+      <div class="si si-p">👑</div>
+      <div><div class="sl">مدير عام</div><div class="sv" id="urc-ag">—</div></div>
+    </div>
+    <div class="sc" style="cursor:pointer" onclick="USR.filterRole('admin_system')">
+      <div class="si si-t">🛡️</div>
+      <div><div class="sl">مدير نظام</div><div class="sv" id="urc-as">—</div></div>
+    </div>
+    <div class="sc" style="cursor:pointer" onclick="USR.filterRole('supervisor')">
+      <div class="si si-gold">🔍</div>
+      <div><div class="sl">مشرف</div><div class="sv" id="urc-sv">—</div></div>
+    </div>
+  </div>
+
+  <!-- تنبيه Service Key -->
+  <div id="usr-key-warn" style="display:none;margin-bottom:16px">
+    <div class="warn-card">
+      <span style="font-size:20px">⚙️</span>
+      <div>
+        <div style="font-weight:700;margin-bottom:4px">إعداد مطلوب لإنشاء حسابات جديدة</div>
+        <div style="font-size:12px;opacity:.8">
+          أدخل Service Role Key من Supabase لتمكين إنشاء حسابات مباشرةً من هنا.
+          <br>الموقع: <b>Supabase → Project Settings → API → service_role secret</b>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+          <input id="usr-svc-key-input" class="fi" dir="ltr" placeholder="eyJhbGci..." 
+            style="font-size:11px;flex:1"/>
+          <button class="btn btn-p btn-s" onclick="USR.saveServiceKey()">حفظ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- فلاتر -->
+  <div class="fb">
+    <input class="fs-in" id="usr-search" placeholder="🔍 بحث بالاسم أو البريد..."
+      oninput="USR.filterView()"/>
+    <select class="fs-sel" id="usr-role-filter" onchange="USR.filterView()">
+      <option value="">جميع الأدوار</option>
+      <option value="admin_general">مدير عام</option>
+      <option value="admin_system">مدير نظام</option>
+      <option value="supervisor">مشرف</option>
+      <option value="teacher">معلم</option>
+    </select>
+    <select class="fs-sel" id="usr-status-filter" onchange="USR.filterView()">
+      <option value="">جميع الحالات</option>
+      <option value="active">نشط</option>
+      <option value="inactive">معطّل</option>
+    </select>
+  </div>
+
+  <!-- جدول المستخدمين -->
   <div class="tw">
-    <table><thead><tr><th>#</th><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-    <tbody id="usr-tbody"><tr><td colspan="5" class="empty">جارٍ التحميل...</td></tr></tbody></table>
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th>المستخدم</th>
+        <th>البريد الإلكتروني</th>
+        <th>الدور</th>
+        <th>تاريخ الإنشاء</th>
+        <th>الحالة</th>
+        <th>إجراءات</th>
+      </tr></thead>
+      <tbody id="usr-tbody"><tr><td colspan="7" class="empty">جارٍ التحميل...</td></tr></tbody>
+    </table>
   </div>
+
+  <!-- ═══ مودال إضافة/تعديل حساب ═══ -->
   <div id="usr-modal" class="mo" style="display:none" onclick="if(event.target===this)USR.closeModal()">
-    <div class="mb">
-      <div class="mh"><h3 id="usr-modal-title">إضافة مستخدم</h3>
-        <button class="mc3" onclick="USR.closeModal()">✕</button></div>
+    <div class="mb mb-lg">
+      <div class="mh">
+        <h3 id="usr-modal-title">إضافة حساب جديد</h3>
+        <button class="mc3" onclick="USR.closeModal()">✕</button>
+      </div>
       <div class="mbd">
-        <form id="usr-form" onsubmit="USR.save(event)" style="display:flex;flex-direction:column;gap:12px">
-          <div class="fg"><label>الاسم الكامل <span class="req">*</span></label>
-            <input class="fi" name="full_name" required/></div>
-          <div id="usr-new-fields">
-            <div class="fg" style="margin-bottom:10px"><label>البريد الإلكتروني</label>
-              <input class="fi" name="email" type="email" dir="ltr"/></div>
-            <div class="fg"><label>كلمة المرور</label>
-              <input class="fi" name="password" type="password" placeholder="6 أحرف على الأقل"/></div>
+
+        <!-- شريط الأدوار البصري -->
+        <div id="usr-role-picker" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+          <div class="usr-role-card" data-role="teacher" onclick="USR.pickRole('teacher')"
+            style="border:2px solid var(--b);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:var(--tr)">
+            <div style="font-size:28px;margin-bottom:6px">📚</div>
+            <div style="font-size:12px;font-weight:700;color:var(--tx)">معلم</div>
+            <div style="font-size:10px;color:var(--ts);margin-top:3px">تسميع · حضور</div>
           </div>
-          <div class="fg"><label>الدور</label>
-            <select class="fi" name="role">
-              <option value="teacher">معلم</option>
-              <option value="supervisor">مشرف</option>
-              <option value="admin_system">مدير نظام</option>
-              <option value="admin_general">مدير عام</option>
-            </select></div>
-          <div class="fg"><label>رقم الهاتف</label>
-            <input class="fi" name="phone" type="tel" dir="ltr"/></div>
-          <div class="mf" style="padding:0;border:none;background:none">
+          <div class="usr-role-card" data-role="supervisor" onclick="USR.pickRole('supervisor')"
+            style="border:2px solid var(--b);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:var(--tr)">
+            <div style="font-size:28px;margin-bottom:6px">🔍</div>
+            <div style="font-size:12px;font-weight:700;color:var(--tx)">مشرف</div>
+            <div style="font-size:10px;color:var(--ts);margin-top:3px">متابعة · تقارير</div>
+          </div>
+          <div class="usr-role-card" data-role="admin_system" onclick="USR.pickRole('admin_system')"
+            style="border:2px solid var(--b);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:var(--tr)">
+            <div style="font-size:28px;margin-bottom:6px">🛡️</div>
+            <div style="font-size:12px;font-weight:700;color:var(--tx)">مدير نظام</div>
+            <div style="font-size:10px;color:var(--ts);margin-top:3px">إدارة · إعدادات</div>
+          </div>
+          <div class="usr-role-card" data-role="admin_general" onclick="USR.pickRole('admin_general')"
+            style="border:2px solid var(--b);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:var(--tr)">
+            <div style="font-size:28px;margin-bottom:6px">👑</div>
+            <div style="font-size:12px;font-weight:700;color:var(--tx)">مدير عام</div>
+            <div style="font-size:10px;color:var(--ts);margin-top:3px">صلاحيات كاملة</div>
+          </div>
+        </div>
+
+        <form id="usr-form" onsubmit="USR.save(event)" style="display:flex;flex-direction:column;gap:14px">
+          <input type="hidden" name="role" id="usr-role-hidden" value="teacher"/>
+
+          <div class="fg2">
+            <div class="fg">
+              <label>الاسم الكامل <span class="req">*</span></label>
+              <input class="fi" name="full_name" required placeholder="مثال: الشيخ محمد أحمد"/>
+            </div>
+            <div class="fg">
+              <label>رقم الهاتف</label>
+              <input class="fi" name="phone" type="tel" dir="ltr" placeholder="01xxxxxxxxx"/>
+            </div>
+          </div>
+
+          <div id="usr-new-fields">
+            <div class="fg2">
+              <div class="fg">
+                <label>البريد الإلكتروني <span class="req">*</span></label>
+                <input class="fi" name="email" type="email" dir="ltr"
+                  placeholder="example@domain.com" autocomplete="off"/>
+              </div>
+              <div class="fg">
+                <label>كلمة المرور <span class="req">*</span></label>
+                <div class="pw">
+                  <input class="fi" name="password" id="usr-pwd" type="password"
+                    placeholder="6 أحرف على الأقل" autocomplete="new-password"/>
+                  <button type="button" class="pw-eye" onclick="USR.togglePwd()">👁</button>
+                </div>
+              </div>
+            </div>
+            <div id="usr-pwd-strength" style="margin-top:-8px"></div>
+          </div>
+
+          <!-- حقل تغيير البريد عند التعديل -->
+          <div id="usr-edit-info" style="display:none">
+            <div class="info-card">
+              <span>ℹ️</span>
+              <span>عند التعديل يمكن تغيير الاسم والدور والهاتف فقط.
+              لتغيير البريد أو كلمة المرور استخدم زر "إعادة تعيين" أدناه.</span>
+            </div>
+          </div>
+
+          <div class="mf" style="padding:0;border:none;background:none;margin-top:4px">
             <button type="button" class="btn btn-g" onclick="USR.closeModal()">إلغاء</button>
-            <button type="submit" class="btn btn-p">حفظ</button>
+            <button type="submit" class="btn btn-p" id="usr-save-btn">💾 إنشاء الحساب</button>
           </div>
         </form>
       </div>
     </div>
   </div>
+
+  <!-- ═══ مودال إعادة تعيين كلمة المرور ═══ -->
+  <div id="usr-reset-modal" class="mo" style="display:none">
+    <div class="mb">
+      <div class="mh">
+        <h3>🔑 إعادة تعيين كلمة المرور</h3>
+        <button class="mc3" onclick="document.getElementById('usr-reset-modal').style.display='none'">✕</button>
+      </div>
+      <div class="mbd" style="display:flex;flex-direction:column;gap:14px">
+        <div class="warn-card">
+          <span>⚠️</span>
+          <span>سيتم تغيير كلمة مرور الحساب: <b id="usr-reset-name"></b></span>
+        </div>
+        <div class="fg">
+          <label>كلمة المرور الجديدة <span class="req">*</span></label>
+          <div class="pw">
+            <input class="fi" id="usr-new-pwd" type="password" placeholder="6 أحرف على الأقل" dir="ltr"/>
+            <button type="button" class="pw-eye" onclick="USR.toggleResetPwd()">👁</button>
+          </div>
+        </div>
+        <div class="mf" style="padding:0;border:none;background:none">
+          <button class="btn btn-g" onclick="document.getElementById('usr-reset-modal').style.display='none'">إلغاء</button>
+          <button class="btn btn-d" onclick="USR.doReset()" id="usr-reset-btn">🔑 تغيير كلمة المرور</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ════════════════ SETTINGS ════════════════ -->
@@ -2907,80 +3064,314 @@ const REP = {
 
 // ══ USERS ══════════════════════════════════════════════════
 const USR = {
-  _data: [], _id: null,
+  _data:[], _id:null, _svcKey:'', _filterRole:'',
 
-  async load() {
-    const tbody = document.getElementById('usr-tbody');
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">جارٍ التحميل...</td></tr>';
-    const { data, error } = await DB.from('profiles').select('*').order('created_at');
-    if (error) { tbody.innerHTML=`<tr><td colspan="5" class="empty">${error.message}</td></tr>`; return; }
-    this._data = data||[];
-    tbody.innerHTML = !this._data.length
-      ? '<tr><td colspan="5" class="empty">لا يوجد مستخدمون</td></tr>'
-      : this._data.map((u,i)=>`
-        <tr class="${u.is_active?'':'row-dim'}">
-          <td class="tn">${i+1}</td>
-          <td><div class="ri"><div class="av">${u.full_name.charAt(0)}</div>
-            <div><div class="cm">${u.full_name}</div>
-            <div class="cs">${u.phone||''}</div></div></div></td>
-          <td><span class="badge bg-${u.role}">${ROLE_AR[u.role]||u.role}</span></td>
-          <td><span class="badge ${u.is_active?'bg-ok':'bg-no'}">${u.is_active?'نشط':'معطّل'}</span></td>
-          <td><div class="ab">
-            <button class="ib" onclick="USR.openEdit('${u.id}')" title="تعديل">✏️</button>
-            <button class="ib" onclick="USR.toggle('${u.id}','${u.full_name}',${u.is_active})" title="${u.is_active?'تعطيل':'تفعيل'}">
-              ${u.is_active?'🚫':'✅'}
-            </button>
-          </div></td>
-        </tr>`).join('');
+  /* ── مفتاح الخدمة ──────────────────────────────────────── */
+  _getSvcKey() {
+    if (this._svcKey) return this._svcKey;
+    return localStorage.getItem('dar_svc_key') || '';
+  },
+  saveServiceKey() {
+    const v = document.getElementById('usr-svc-key-input').value.trim();
+    if (!v.startsWith('eyJ')) { toast('مفتاح غير صحيح — يجب أن يبدأ بـ eyJ', 'error'); return; }
+    this._svcKey = v;
+    localStorage.setItem('dar_svc_key', v);
+    document.getElementById('usr-key-warn').style.display = 'none';
+    toast('✅ تم حفظ المفتاح بنجاح', 'success');
   },
 
+  /* ── اختيار الدور بصرياً ──────────────────────────────── */
+  pickRole(role) {
+    document.getElementById('usr-role-hidden').value = role;
+    document.querySelectorAll('.usr-role-card').forEach(el => {
+      const active = el.dataset.role === role;
+      el.style.borderColor = active ? 'var(--P)' : 'var(--b)';
+      el.style.background   = active ? 'var(--Pbg)' : '';
+      el.style.transform    = active ? 'translateY(-2px)' : '';
+      el.style.boxShadow    = active ? 'var(--sh-green)' : '';
+    });
+  },
+
+  togglePwd() {
+    const f = document.getElementById('usr-pwd');
+    f.type = f.type === 'password' ? 'text' : 'password';
+  },
+  toggleResetPwd() {
+    const f = document.getElementById('usr-new-pwd');
+    f.type = f.type === 'password' ? 'text' : 'password';
+  },
+
+  /* ── التحميل ───────────────────────────────────────────── */
+  async load() {
+    const tbody = document.getElementById('usr-tbody');
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">
+      <div class="loader"></div><div style="margin-top:8px">جارٍ التحميل...</div>
+    </td></tr>`;
+
+    const { data, error } = await DB.from('profiles')
+      .select('*').order('role').order('created_at');
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty" style="color:var(--red)">خطأ: ${error.message}</td></tr>`;
+      return;
+    }
+    this._data = data || [];
+    this._updateCards();
+
+    // تحقق من وجود مفتاح الخدمة
+    if (!this._getSvcKey()) {
+      document.getElementById('usr-key-warn').style.display = 'block';
+    }
+
+    this.renderTable(this._data);
+  },
+
+  _updateCards() {
+    const d = this._data;
+    const el = id => document.getElementById(id);
+    el('urc-all').textContent = d.length;
+    el('urc-ag').textContent  = d.filter(u=>u.role==='admin_general').length;
+    el('urc-as').textContent  = d.filter(u=>u.role==='admin_system').length;
+    el('urc-sv').textContent  = d.filter(u=>u.role==='supervisor').length;
+  },
+
+  filterRole(role) {
+    this._filterRole = role;
+    document.getElementById('usr-role-filter').value = role;
+    this.filterView();
+  },
+
+  filterView() {
+    const search = (document.getElementById('usr-search')?.value||'').toLowerCase();
+    const role   = document.getElementById('usr-role-filter')?.value || '';
+    const status = document.getElementById('usr-status-filter')?.value || '';
+    const filtered = this._data.filter(u => {
+      const matchName   = !search || (u.full_name||'').toLowerCase().includes(search)
+                                  || (u.email||'').toLowerCase().includes(search);
+      const matchRole   = !role   || u.role === role;
+      const matchStatus = !status || (status==='active' ? u.is_active : !u.is_active);
+      return matchName && matchRole && matchStatus;
+    });
+    this.renderTable(filtered);
+  },
+
+  renderTable(data) {
+    const roleIcons = {
+      admin_general:'👑', admin_system:'🛡️', supervisor:'🔍', teacher:'📚'
+    };
+    const roleColors = {
+      admin_general:'bg-admin_general', admin_system:'bg-admin_system',
+      supervisor:'bg-supervisor', teacher:'bg-teacher'
+    };
+    const tbody = document.getElementById('usr-tbody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">لا يوجد مستخدمون مطابقون</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map((u,i) => `
+      <tr style="${u.is_active ? '' : 'opacity:.5'}">
+        <td class="tn">${i+1}</td>
+        <td>
+          <div class="ri">
+            <div class="av" style="background:${this._avatarColor(u.role)};color:white;font-weight:700">
+              ${(u.full_name||'?').charAt(0)}
+            </div>
+            <div>
+              <div class="cm">${u.full_name||'—'}</div>
+              <div class="cs">${u.phone||''}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-size:12px;color:var(--ts);direction:ltr">${u.email||'—'}</td>
+        <td>
+          <span class="badge ${roleColors[u.role]||'bg-in'}">
+            ${roleIcons[u.role]||''} ${ROLE_AR[u.role]||u.role}
+          </span>
+        </td>
+        <td class="td">${u.created_at ? new Date(u.created_at).toLocaleDateString('ar-EG') : '—'}</td>
+        <td>
+          <span style="display:inline-flex;align-items:center;gap:5px">
+            <span class="dot-status ${u.is_active?'dot-green':'dot-gray'}"></span>
+            <span style="font-size:12px;color:var(--ts)">${u.is_active?'نشط':'معطّل'}</span>
+          </span>
+        </td>
+        <td>
+          <div class="ab">
+            <button class="ib" onclick="USR.openEdit('${u.id}')" title="تعديل">✏️</button>
+            <button class="ib" onclick="USR.openReset('${u.id}','${(u.full_name||'').replace(/'/g,"")}')" title="إعادة تعيين كلمة المرور">🔑</button>
+            <button class="ib" onclick="USR.toggle('${u.id}','${(u.full_name||'').replace(/'/g,"")}',${u.is_active})"
+              title="${u.is_active?'تعطيل':'تفعيل'}" style="color:${u.is_active?'#f59e0b':'#22c55e'}">
+              ${u.is_active?'🚫':'✅'}
+            </button>
+          </div>
+        </td>
+      </tr>`).join('');
+  },
+
+  _avatarColor(role) {
+    return {
+      admin_general:'linear-gradient(135deg,#6d28d9,#8b5cf6)',
+      admin_system: 'linear-gradient(135deg,#0e7490,#06b6d4)',
+      supervisor:   'linear-gradient(135deg,#b45309,#f59e0b)',
+      teacher:      'linear-gradient(135deg,#15803d,#22c55e)',
+    }[role] || 'linear-gradient(135deg,#64748b,#94a3b8)';
+  },
+
+  /* ── الفتح ─────────────────────────────────────────────── */
   openAdd() {
     this._id = null;
-    document.getElementById('usr-modal-title').textContent = 'إضافة مستخدم';
+    document.getElementById('usr-modal-title').textContent = 'إضافة حساب جديد';
     document.getElementById('usr-form').reset();
-    document.getElementById('usr-new-fields').style.display = 'block';
-    document.getElementById('usr-modal').style.display = 'flex';
+    document.getElementById('usr-new-fields').style.display  = 'block';
+    document.getElementById('usr-edit-info').style.display   = 'none';
+    document.getElementById('usr-save-btn').textContent      = '💾 إنشاء الحساب';
+    document.getElementById('usr-modal').style.display       = 'flex';
+    this.pickRole('teacher');
   },
 
   openEdit(id) {
+    const u = this._data.find(x=>x.id===id); if (!u) return;
     this._id = id;
-    const u = this._data.find(x=>x.id===id); if(!u) return;
-    document.getElementById('usr-modal-title').textContent = 'تعديل المستخدم';
-    document.getElementById('usr-new-fields').style.display = 'none';
+    document.getElementById('usr-modal-title').textContent = 'تعديل الحساب';
+    document.getElementById('usr-new-fields').style.display  = 'none';
+    document.getElementById('usr-edit-info').style.display   = 'block';
+    document.getElementById('usr-save-btn').textContent      = '💾 حفظ التعديلات';
     const f = document.getElementById('usr-form');
     f.querySelector('[name=full_name]').value = u.full_name||'';
-    f.querySelector('[name=role]').value = u.role||'teacher';
-    f.querySelector('[name=phone]').value = u.phone||'';
+    f.querySelector('[name=phone]').value     = u.phone||'';
+    this.pickRole(u.role||'teacher');
     document.getElementById('usr-modal').style.display = 'flex';
   },
 
-  closeModal() { document.getElementById('usr-modal').style.display='none'; },
-
-  async save(e) {
-    e.preventDefault();
-    const d = getForm('usr-form');
-    try {
-      if (this._id) {
-        await DB.from('profiles').update({
-          full_name:d.full_name, role:d.role, phone:d.phone||null
-        }).eq('id',this._id);
-        toast('✅ تم التحديث', 'success');
-      } else {
-        toast('⚠️ إنشاء مستخدم جديد يتطلب Supabase Dashboard أو Admin API', 'warn');
-      }
-      this.closeModal(); await this.load();
-    } catch(err) { toast(err.message, 'error'); }
+  closeModal() {
+    document.getElementById('usr-modal').style.display = 'none';
+    this._id = null;
   },
 
+  openReset(id, name) {
+    this._resetId = id;
+    document.getElementById('usr-reset-name').textContent = name;
+    document.getElementById('usr-new-pwd').value = '';
+    document.getElementById('usr-reset-modal').style.display = 'flex';
+  },
+
+  /* ── الحفظ ─────────────────────────────────────────────── */
+  async save(e) {
+    e.preventDefault();
+    const btn = document.getElementById('usr-save-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ جارٍ الحفظ...';
+
+    const d = getForm('usr-form');
+    d.role = document.getElementById('usr-role-hidden').value || 'teacher';
+
+    try {
+      if (this._id) {
+        /* ── تعديل ── */
+        const { error } = await DB.from('profiles').update({
+          full_name: d.full_name.trim(),
+          role:      d.role,
+          phone:     d.phone?.trim() || null,
+          updated_at: new Date().toISOString()
+        }).eq('id', this._id);
+        if (error) throw error;
+        toast('✅ تم تحديث بيانات الحساب', 'success');
+
+      } else {
+        /* ── إنشاء جديد ── */
+        const svcKey = this._getSvcKey();
+        if (!svcKey) {
+          toast('⚠️ أدخل Service Role Key أولاً لإنشاء حسابات جديدة', 'warn');
+          document.getElementById('usr-key-warn').style.display = 'block';
+          return;
+        }
+        if (!d.email || !d.password) throw new Error('البريد وكلمة المرور مطلوبان');
+        if (d.password.length < 6)   throw new Error('كلمة المرور 6 أحرف على الأقل');
+
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${svcKey}`,
+            'apikey': svcKey
+          },
+          body: JSON.stringify({
+            email:         d.email.trim().toLowerCase(),
+            password:      d.password,
+            email_confirm: true,
+            user_metadata: { full_name: d.full_name.trim(), role: d.role }
+          })
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.msg || json.message || JSON.stringify(json));
+
+        /* تحديث الـ profile بعد الإنشاء */
+        await new Promise(r => setTimeout(r, 800));
+        await DB.from('profiles').update({
+          full_name: d.full_name.trim(),
+          role:      d.role,
+          phone:     d.phone?.trim() || null,
+          is_active: true
+        }).eq('id', json.id);
+
+        toast(`✅ تم إنشاء حساب "${d.full_name}" بنجاح`, 'success');
+      }
+
+      this.closeModal();
+      await this.load();
+
+    } catch(err) {
+      console.error('USR.save:', err);
+      toast('❌ ' + (err.message || 'حدث خطأ'), 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = this._id ? '💾 حفظ التعديلات' : '💾 إنشاء الحساب';
+    }
+  },
+
+  /* ── إعادة تعيين كلمة المرور ──────────────────────────── */
+  async doReset() {
+    const btn = document.getElementById('usr-reset-btn');
+    const pwd = document.getElementById('usr-new-pwd').value;
+    if (pwd.length < 6) { toast('كلمة المرور 6 أحرف على الأقل', 'error'); return; }
+
+    const svcKey = this._getSvcKey();
+    if (!svcKey) { toast('⚠️ Service Role Key مطلوب', 'warn'); return; }
+
+    btn.disabled = true; btn.textContent = '⏳ جارٍ التغيير...';
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${this._resetId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${svcKey}`,
+          'apikey': svcKey
+        },
+        body: JSON.stringify({ password: pwd })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.msg || json.message || JSON.stringify(json));
+
+      toast('✅ تم تغيير كلمة المرور بنجاح', 'success');
+      document.getElementById('usr-reset-modal').style.display = 'none';
+    } catch(err) {
+      toast('❌ ' + err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '🔑 تغيير كلمة المرور';
+    }
+  },
+
+  /* ── تفعيل/تعطيل ───────────────────────────────────────── */
   async toggle(id, name, active) {
     const action = active ? 'تعطيل' : 'تفعيل';
-    const ok = await CONF.ask(`${action} حساب "${name}"؟`); if(!ok) return;
-    await DB.from('profiles').update({is_active:!active}).eq('id',id);
+    const ok = await CONF.ask(`${action} حساب "${name}"؟`);
+    if (!ok) return;
+    const { error } = await DB.from('profiles').update({is_active:!active}).eq('id',id);
+    if (error) { toast('خطأ: '+error.message,'error'); return; }
     toast(`تم ${action} الحساب`, active?'warn':'success');
     await this.load();
   }
 };
-
 // ══ SETTINGS ══════════════════════════════════════════════════
 const SET = {
   async load() {
