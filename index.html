@@ -2399,21 +2399,41 @@ tbody tr:hover td {
   </div>
   <div id="ann-modal" class="mo" style="display:none" onclick="if(event.target===this)ANN.closeModal()">
     <div class="mb"><div class="mh"><h3 id="ann-modal-title">إضافة إعلان</h3><button class="mc3" onclick="ANN.closeModal()">&#x2715;</button></div>
-      <div class="mbd"><form id="ann-form" onsubmit="ANN.save(event)" style="display:flex;flex-direction:column;gap:12px">
-        <div class="fg"><label>العنوان <span class="req">*</span></label><input class="fi" name="title" required/></div>
-        <div class="fg2">
-          <div class="fg"><label>النوع</label>
-            <select class="fi" name="type">
-              <option value="announcement">إعلان عام</option><option value="reminder">تذكير</option>
-              <option value="event">حدث</option><option value="holiday">إجازة</option>
-            </select></div>
-          <div class="fg"><label>ينتهي في</label><input class="fi" name="expires_at" type="date"/></div>
+      <div class="mbd"><form id="ann-form" onsubmit="ANN.save(event)" style="display:flex;flex-direction:column;gap:14px">
+        <div class="fg">
+          <label>العنوان <span class="req">*</span></label>
+          <input class="fi" name="title" placeholder="عنوان الإعلان..." required/>
         </div>
-        <div class="fg"><label>المحتوى <span class="req">*</span></label>
-          <textarea class="fi" name="content" rows="3" required></textarea></div>
+        <div class="fg2">
+          <div class="fg">
+            <label>النوع</label>
+            <select class="fi" name="type">
+              <option value="info">📢 إعلان عام</option>
+              <option value="reminder">📅 تذكير</option>
+              <option value="event">🎉 حدث</option>
+              <option value="holiday">🌙 إجازة</option>
+              <option value="warning">⚠️ تحذير</option>
+              <option value="alert">🔔 تنبيه</option>
+              <option value="success">🏆 تكريم / نجاح</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>المستهدف</label>
+            <select class="fi" name="target_role">
+              <option value="">الجميع</option>
+              <option value="teacher">المعلمون</option>
+              <option value="supervisor">المشرفون</option>
+              <option value="admin_general">المديرون</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg">
+          <label>المحتوى <span class="req">*</span></label>
+          <textarea class="fi" name="content" rows="4" placeholder="اكتب نص الإعلان هنا..." required></textarea>
+        </div>
         <div class="mf" style="padding:0;border:none;background:none">
           <button type="button" class="btn btn-g" onclick="ANN.closeModal()">إلغاء</button>
-          <button type="submit" class="btn btn-p">نشر</button>
+          <button type="submit" class="btn btn-p">📢 نشر الإعلان</button>
         </div>
       </form></div></div></div>
 </div>
@@ -2706,10 +2726,10 @@ const APP = {
 
     // Show announcement count on sidebar button
     try {
-      const { count } = await DB.from('announcements')
+      const { count } = await DB.from('notifications')
         .select('id', { count: 'exact', head: true })
-        .eq('is_active', true)
-        .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString().split('T')[0]}`);
+        .is('target_user_id', null)
+        .eq('is_read', false);
       if (count > 0) {
         document.querySelectorAll('[data-nav="announcements"]').forEach(btn => {
           btn.innerHTML = btn.innerHTML.replace('</button>','') +
@@ -2823,7 +2843,10 @@ const APP = {
     localStorage.setItem('dar-theme', isDark ? 'light' : 'dark');
   },
 
-  showNotifs() { toast('لا توجد إشعارات جديدة', 'info'); }
+  showNotifs() {
+    // الانتقال لصفحة الإعلانات
+    this.go('announcements');
+  }
 };
 
 // ══ DASHBOARD ════════════════════════════════════════════════
@@ -4470,79 +4493,203 @@ const CERT = {
 // ══ ANNOUNCEMENTS ═════════════════════════════════════════════
 const ANN = {
   _data: [],
-  _typeLabels: {announcement:'إعلان عام',reminder:'تذكير',event:'حدث',holiday:'إجازة',info:'معلومة',warning:'تحذير'},
-  _typeBadge:  {announcement:'bg-in',reminder:'bg-wa',event:'bg-ok',holiday:'bg-no',info:'bg-in',warning:'bg-wa'},
+  // قيم النوع المتوافقة مع قاعدة البيانات
+  _typeLabels: {
+    info:'إعلان عام', warning:'تحذير', alert:'تنبيه',
+    success:'نجاح / تكريم', reminder:'تذكير', event:'حدث', holiday:'إجازة'
+  },
+  _typeBadge: {
+    info:'bg-in', warning:'bg-wa', alert:'bg-wa', success:'bg-ok',
+    reminder:'bg-in', event:'bg-ok', holiday:'bg-no'
+  },
+  _typeIcon: {
+    info:'📢', warning:'⚠️', alert:'🔔', success:'🏆',
+    reminder:'📅', event:'🎉', holiday:'🌙'
+  },
+
   async load() {
+    if (!DB) { return; }
     const tbody = document.getElementById('ann-tbody');
-    tbody.innerHTML='<tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr>';
-    const { data,error } = await DB.from('notifications')
-      .select('*').is('target_user_id',null).order('created_at',{ascending:false});
-    if (error) { tbody.innerHTML=`<tr><td colspan="6" class="empty">خطأ: ${error.message}</td></tr>`; return; }
-    this._data = data||[];
-    tbody.innerHTML = !this._data.length
-      ? '<tr><td colspan="6" class="empty">لا توجد إعلانات</td></tr>'
-      : this._data.map((a,i)=>`<tr>
-          <td class="tn">${i+1}</td>
-          <td><div class="cm">${a.title}</div>
-            <div class="cs" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.body||''}</div></td>
-          <td><span class="badge ${this._typeBadge[a.type]||'bg-in'}">${this._typeLabels[a.type]||a.type}</span></td>
-          <td class="td">${fmtDate(a.created_at)}</td>
-          <td>${a.target_role||'الجميع'}</td>
-          <td><div class="ab">
-            <button class="ib" onclick="ANN.del('${a.id}')" title="حذف">🗑️</button>
-          </div></td></tr>`).join('');
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr>';
+    try {
+      const { data, error } = await DB.from('notifications')
+        .select('*')
+        .is('target_user_id', null)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      this._data = data || [];
+      this._render();
+      // تحديث العداد في الشريط الجانبي
+      this._updateBadge();
+    } catch(err) {
+      console.error('ANN.load:', err);
+      tbody.innerHTML = `<tr><td colspan="6" class="empty" style="color:var(--danger)">خطأ في التحميل: ${err.message||'تحقق من الاتصال'}</td></tr>`;
+    }
   },
+
+  _render() {
+    const tbody = document.getElementById('ann-tbody');
+    if (!this._data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">لا توجد إعلانات بعد</td></tr>';
+      return;
+    }
+    tbody.innerHTML = this._data.map((a, i) => {
+      const typeLabel = this._typeLabels[a.type] || a.type || 'إعلان';
+      const badgeCls  = this._typeBadge[a.type]  || 'bg-in';
+      const icon      = this._typeIcon[a.type]    || '📢';
+      const bodyText  = a.body || '';
+      const readMark  = a.is_read
+        ? '<span style="color:var(--th);font-size:11px">✓ مقروء</span>'
+        : '<span style="color:#22c55e;font-size:11px;font-weight:700">● جديد</span>';
+      return `<tr>
+        <td class="tn">${i + 1}</td>
+        <td>
+          <div class="cm" style="display:flex;align-items:center;gap:6px">
+            <span>${icon}</span>
+            <span style="font-weight:700">${escHtml(a.title)}</span>
+          </div>
+          <div class="cs" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ts);margin-top:3px">${escHtml(bodyText)}</div>
+          <div style="margin-top:4px">${readMark}</div>
+        </td>
+        <td><span class="badge ${badgeCls}">${typeLabel}</span></td>
+        <td class="td">${fmtDate(a.created_at)}</td>
+        <td style="font-size:12px">${a.target_role ? roleLabel(a.target_role) : '<span style="color:var(--th)">الجميع</span>'}</td>
+        <td><div class="ab">
+          <button class="ib" onclick="ANN.toggleRead('${a.id}',${!!a.is_read})" title="${a.is_read ? 'وضع كغير مقروء' : 'وضع كمقروء'}">
+            ${a.is_read ? '📭' : '📬'}
+          </button>
+          <button class="ib" onclick="ANN.del('${a.id}')" title="حذف" style="color:#ef4444">🗑️</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+  },
+
+  _updateBadge() {
+    const unread = this._data.filter(a => !a.is_read).length;
+    // شارة الشريط الجانبي
+    document.querySelectorAll('[data-nav="announcements"]').forEach(btn => {
+      const old = btn.querySelector('.ann-badge');
+      if (old) old.remove();
+      if (unread > 0) {
+        const sp = document.createElement('span');
+        sp.className = 'ann-badge si-count';
+        sp.style.cssText = 'margin-right:auto;font-size:10px;background:#ef4444;color:#fff;border-radius:9px;padding:1px 7px;font-weight:700';
+        sp.textContent = unread;
+        btn.appendChild(sp);
+      }
+    });
+    // شارة الجرس في الشريط العلوي
+    const bell = document.getElementById('notif-badge');
+    if (bell) {
+      if (unread > 0) { bell.textContent = unread; bell.style.display = ''; }
+      else bell.style.display = 'none';
+    }
+  },
+
   openAdd() {
-    document.getElementById('ann-modal-title').textContent='إضافة إعلان';
+    document.getElementById('ann-modal-title').textContent = '📢 إضافة إعلان جديد';
     document.getElementById('ann-form').reset();
-    document.getElementById('ann-modal').style.display='flex';
+    document.getElementById('ann-modal').style.display = 'flex';
   },
-  closeModal() { document.getElementById('ann-modal').style.display='none'; },
+
+  closeModal() {
+    document.getElementById('ann-modal').style.display = 'none';
+  },
+
   async save(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type=submit]');
     const origText = btn.textContent;
-    btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
-    
-    const raw = getForm('ann-form');
-    if (!raw.title || raw.title.trim().length === 0) {
-      toast('أدخل عنوان الإعلان','error');
-      btn.disabled = false; btn.textContent = origText;
-      return;
-    }
-    
-    const d = {
-      title:       raw.title.trim(),
-      body:        (raw.content || raw.body || '').trim() || null,
-      type:        raw.type === 'announcement' ? 'info' : raw.type === 'holiday' ? 'warning' : raw.type || 'info',
-      target_role: raw.target_role || null,
-      is_read:     false,
-      created_at:  new Date().toISOString()
-    };
-    
+    btn.disabled = true; btn.textContent = 'جارٍ النشر...';
+
     try {
-      const result = await DB.from('notifications').insert(d);
-      if (result.error) {
-        throw new Error(result.error.message || JSON.stringify(result.error));
+      const raw = getForm('ann-form');
+
+      // التحقق من الحقول المطلوبة
+      if (!raw.title || !raw.title.trim()) {
+        toast('⚠️ أدخل عنوان الإعلان', 'error');
+        return;
       }
-      toast('✅ تم نشر الإعلان','success');
-      this.closeModal(); 
+      if (!raw.content || !raw.content.trim()) {
+        toast('⚠️ أدخل محتوى الإعلان', 'error');
+        return;
+      }
+
+      const d = {
+        title:          raw.title.trim(),
+        body:           raw.content.trim(),
+        type:           raw.type || 'info',
+        target_role:    raw.target_role || null,
+        target_user_id: null,
+        is_read:        false,
+        created_by:     APP._profile?.id || null,
+        created_at:     new Date().toISOString()
+      };
+
+      const { error } = await DB.from('notifications').insert([d]);
+      if (error) throw error;
+
+      toast('✅ تم نشر الإعلان بنجاح', 'success');
+      this.closeModal();
       await this.load();
-    } catch(err) { 
+
+    } catch(err) {
       console.error('ANN.save error:', err);
-      toast('خطأ: '+(err.message||JSON.stringify(err)),'error'); 
+      const msg = err.message || JSON.stringify(err);
+      // رسائل خطأ مترجمة
+      if (msg.includes('violates row-level security')) {
+        toast('❌ خطأ في الصلاحيات — طبّق ملف SQL الإصلاحي أولاً', 'error');
+      } else if (msg.includes('null value') || msg.includes('not-null')) {
+        toast('❌ بيانات ناقصة: ' + msg, 'error');
+      } else {
+        toast('❌ خطأ: ' + msg, 'error');
+      }
     } finally {
-      btn.disabled = false; 
-      btn.textContent = origText;
+      btn.disabled = false; btn.textContent = origText;
     }
   },
+
+  async toggleRead(id, currentlyRead) {
+    try {
+      const { error } = await DB.from('notifications')
+        .update({ is_read: !currentlyRead })
+        .eq('id', id);
+      if (error) throw error;
+      // تحديث محلي بدون إعادة تحميل
+      const item = this._data.find(a => a.id == id);
+      if (item) item.is_read = !currentlyRead;
+      this._render();
+      this._updateBadge();
+    } catch(err) {
+      toast('خطأ: ' + (err.message || err), 'error');
+    }
+  },
+
   async del(id) {
-    const ok = await CONF.ask('حذف هذا الإعلان؟'); if (!ok) return;
-    await DB.from('notifications').delete().eq('id',id);
-    toast('تم الحذف','warn'); await this.load();
+    const ok = await CONF.ask('هل تريد حذف هذا الإعلان نهائياً؟');
+    if (!ok) return;
+    try {
+      const { error } = await DB.from('notifications').delete().eq('id', id);
+      if (error) throw error;
+      toast('🗑️ تم حذف الإعلان', 'warn');
+      await this.load();
+    } catch(err) {
+      toast('خطأ في الحذف: ' + (err.message || err), 'error');
+    }
   }
 };
 
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function roleLabel(role) {
+  const m = {teacher:'معلم', supervisor:'مشرف', admin_general:'مدير عام', admin_system:'مدير نظام'};
+  return m[role] || role;
+}
 APP.boot();
 </script>
 </body>
