@@ -37,6 +37,9 @@
 
   /* عرض الشريط الجانبي */
   --sw:264px;
+  --bg-solid:#f6f7f9;
+  --Pm:#22a35e;
+  --gold-lt:#d4a017;
 
   /* الظلال */
   --sh0:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
@@ -300,10 +303,7 @@ body.login-mode::before{
 /* ══════════════════════════════════════════════════════
    📐 التخطيط العام
    ══════════════════════════════════════════════════════ */
-.mc{margin-right:var(--sw);min-height:100vh;background:var(--bg-solid)}
-[data-theme=dark] .mc{background:#08100c}
-body{background:var(--bg-solid)!important}
-[data-theme=dark] body{background:#08100c!important}
+.mc{margin-right:var(--sw);min-height:100vh}
 .tb{
   background:var(--topbar);
   border-bottom:1px solid var(--b);
@@ -829,43 +829,7 @@ tbody tr:hover td{background:var(--card2)}
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
 
 /* ══ متغيرات الألوان المحسّنة ═══════════════════════════════════ */
-:root {
-  /* ═ متغيرات التخطيط والألوان الإضافية ═ */
-
-  /* خلفية النهار - أكثر نعومة */
-  --bg:linear-gradient(160deg,#f0f7f3 0%,#f5f5f0 50%,#eef5fb 100%);
-  --bg-solid:#f0f7f4;
-  --card:#ffffff;
-  --card2:#f8fcf9;
-  --card3:#f0f8f3;
-  --topbar:#ffffffee;
-  --sb-bg:linear-gradient(180deg,#0a2018 0%,#0f2d1e 40%,#0d2619 100%);
-
-  /* النصوص */
-  --tx:#0f1f14; --ts:#445e50; --th:#7a9485;
-
-  /* الحدود */
-  --b:rgba(15,81,50,.12); --b2:rgba(15,81,50,.06); --b3:rgba(15,81,50,.2);
-
-  /* الظلال المحسّنة */
-  --sh0:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.03);
-  --sh1:0 4px 12px rgba(15,81,50,.08),0 2px 4px rgba(0,0,0,.04);
-  --sh2:0 12px 28px rgba(15,81,50,.12),0 4px 8px rgba(0,0,0,.06);
-  --sh3:0 24px 48px rgba(15,81,50,.15),0 8px 16px rgba(0,0,0,.08);
-  --sh-green:0 4px 20px rgba(15,81,50,.35),0 2px 8px rgba(15,81,50,.2);
-  --sh-gold:0 4px 20px rgba(184,134,11,.3);
-  --sh-card:0 0 0 1px rgba(15,81,50,.06),0 2px 12px rgba(15,81,50,.07);
-
-  /* الانتقالات المحسّنة */
-  --tr:all .25s cubic-bezier(.4,0,.2,1);
-  --tr-fast:all .15s ease;
-  --tr-spring:all .3s cubic-bezier(.34,1.56,.64,1);
-
-  /* الأنصاع */
-  --r1:8px;--r2:12px;--r3:16px;--r4:20px;--r5:28px;
-
-  --sw:272px;
-}
+/* upgrade vars merged into :root above */
 
 /* ══ الوضع الليلي المحسّن ═══════════════════════════════════════ */
 [data-theme=dark] {
@@ -892,7 +856,7 @@ tbody tr:hover td{background:var(--card2)}
 /* ══ القاعدة المحسّنة ═══════════════════════════════════════════ */
 body {
   font-family:'Cairo','Segoe UI','Noto Sans Arabic',sans-serif !important;
-  background:var(--bg-solid) !important;
+  background:var(--bg) !important;
   -webkit-font-smoothing:antialiased;
   font-feature-settings:"kern" 1;
 }
@@ -1409,10 +1373,6 @@ tbody tr:hover td {
 #dash-hijri { font-size:12px !important; }
 
 /* ══ CSS فقط للوضع الليلي: خلفية متدرجة ════════════════════════ */
-[data-theme=dark] body {
-  background:var(--bg-solid) !important;
-}
-
 [data-theme=dark] .dash-hero {
   background:linear-gradient(135deg,#020a05 0%,#060f0a 25%,#081410 55%,#050d09 80%,#030905 100%) !important;
   border-color:rgba(26,122,71,.2) !important;
@@ -1448,6 +1408,290 @@ tbody tr:hover td {
   display:inline-block;
 }
 .qb2:hover .qi { transform:scale(1.2) rotate(-5deg) !important; }
+
+
+
+/* ════════════════════════════════════════════════════════════
+   🔧 إصلاح شامل للتصميم — عناصر مفقودة وتعارضات
+   ════════════════════════════════════════════════════════════ */
+
+/* ══ 1. التبويبات (.tabs / .tab) — مفقودة كلياً ═══════════ */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  background: var(--card2);
+  border: 1px solid var(--b);
+  border-radius: var(--r2);
+  margin-bottom: 18px;
+  width: fit-content;
+  flex-wrap: wrap;
+}
+.tab {
+  padding: 8px 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--ts);
+  transition: var(--tr);
+  white-space: nowrap;
+}
+.tab:hover {
+  background: var(--card);
+  color: var(--tx);
+}
+.tab.on {
+  background: var(--card);
+  color: var(--P);
+  box-shadow: var(--sh0);
+  border: 1px solid rgba(15,81,50,.15);
+}
+[data-theme=dark] .tab.on {
+  background: rgba(26,122,71,.12);
+  color: #4ade80;
+  border-color: rgba(26,122,71,.2);
+}
+
+/* ══ 2. حقل تاريخ / فلتر بسيط (.fs) ═══════════════════════ */
+.fs {
+  padding: 9px 13px;
+  border: 1.5px solid var(--b);
+  border-radius: var(--r2);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--tx);
+  outline: none;
+  transition: var(--tr);
+  box-shadow: var(--sh0);
+  cursor: pointer;
+}
+.fs:focus {
+  border-color: var(--P);
+  box-shadow: 0 0 0 3px var(--Pbg);
+}
+
+/* ══ 3. رسالة التحميل (.load) ══════════════════════════════ */
+.load {
+  text-align: center;
+  color: var(--th);
+  padding: 48px 24px;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* ══ 4. عداد شارة صغيرة (.si-count / .nb) ══════════════════ */
+.si-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ══ 5. بطاقة معلومات (.info-card / .warn-card) ════════════ */
+.info-card {
+  background: var(--Bbg);
+  border: 1px solid rgba(29,78,216,.15);
+  border-radius: var(--r2);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--blue);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.6;
+}
+.warn-card {
+  background: var(--Obg);
+  border: 1px solid rgba(194,65,12,.15);
+  border-radius: var(--r2);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--orange);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.6;
+}
+[data-theme=dark] .info-card { border-color: rgba(59,130,246,.2); }
+[data-theme=dark] .warn-card { border-color: rgba(249,115,22,.2); }
+
+/* ══ 6. جدول التقارير — نص وعناوين ═══════════════════════ */
+#rep-output table thead th {
+  background: linear-gradient(180deg, var(--card2), var(--card3));
+}
+#rep-output .rep-total {
+  font-weight: 700;
+  color: var(--P);
+  font-size: 15px;
+}
+#rep-output h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tx);
+  margin: 16px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--b);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rep-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.rep-stat {
+  background: var(--card2);
+  border: 1px solid var(--b);
+  border-radius: var(--r2);
+  padding: 14px 16px;
+  text-align: center;
+}
+.rep-stat-v {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--tx);
+  letter-spacing: -.4px;
+}
+.rep-stat-l {
+  font-size: 11px;
+  color: var(--th);
+  margin-top: 4px;
+}
+
+/* ══ 7. اصلاح ازرار المالية — tab مع عرض كامل للصفحة ══════ */
+#sec-finance .tabs,
+#sec-reports .tabs {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+/* ══ 8. تحسين حقول التاريخ في التقارير ═══════════════════ */
+#rep-from, #rep-to {
+  padding: 9px 13px;
+  border: 1.5px solid var(--b);
+  border-radius: var(--r2);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--tx);
+  outline: none;
+  cursor: pointer;
+}
+#rep-from:focus, #rep-to:focus {
+  border-color: var(--P);
+  box-shadow: 0 0 0 3px var(--Pbg);
+}
+
+/* ══ 9. تعريف متغيرات ناقصة في الوضع الليلي ════════════ */
+[data-theme=dark] {
+  --blue: #60a5fa;
+  --teal: #22d3ee;
+  --orange: #fb923c;
+  --purple: #a78bfa;
+  --gold: #fbbf24;
+}
+
+/* ══ 10. بطاقة الإجراء السريع — إصلاح الهوفر ═══════════ */
+.qb2:hover .qi {
+  transform: scale(1.2) !important;
+}
+
+/* ══ 11. تحسين فلتر الحضور ═════════════════════════════ */
+#att-date {
+  padding: 9px 13px;
+  border: 1.5px solid var(--b);
+  border-radius: var(--r2);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--tx);
+  outline: none;
+  cursor: pointer;
+}
+#att-date:focus {
+  border-color: var(--P);
+  box-shadow: 0 0 0 3px var(--Pbg);
+}
+
+/* ══ 12. تحسين الـ select في ATT للألوان المتغيرة ══════ */
+#att-tbody select.fi {
+  min-width: 120px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+}
+
+/* ══ 13. خلفية الصفحة الرئيسية */
+.mc {
+  background: var(--bg) !important;
+}
+[data-theme=dark] .mc {
+  background: var(--bg) !important;
+}
+body {
+  background: var(--bg) !important;
+}
+
+/* ══ 14. تحسين حلقات modal overflow ══════════════════════ */
+.mb-xl {
+  max-height: 94vh;
+}
+
+/* ══ 15. مؤشر تحميل .spin للأزرار ══════════════════════ */
+button .spin {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* ══ 16. تصحيح ألوان الداشبورد hero section ══════════════ */
+.dash-hero-stat-v {
+  font-size: 26px !important;
+  font-weight: 900 !important;
+}
+.dash-hero .dash-hero-stat:not(:last-child) {
+  border-right: 1px solid rgba(255,255,255,.1) !important;
+}
+
+/* ══ 17. print styles ════════════════════════════════════ */
+@media print {
+  .sb, .tb, .ph { display: none !important; }
+  .mc { margin-right: 0 !important; }
+  .sec { display: block !important; }
+  .tw { box-shadow: none !important; border: 1px solid #ddd !important; }
+}
+
+/* ══ 18. تحسين responsive للشبكات ══════════════════════ */
+@media (max-width: 1024px) {
+  .sg { grid-template-columns: repeat(2, 1fr) !important; }
+  .dg { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 768px) {
+  .mc { margin-right: 0 !important; }
+  .sb { transform: translateX(100%); transition: transform .3s; }
+  .sg { grid-template-columns: repeat(2, 1fr) !important; }
+  .ca { padding: 16px !important; }
+}
 
 </style>
 </head>
