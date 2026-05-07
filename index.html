@@ -1713,19 +1713,12 @@ button .spin {
   contain: layout;
 }
 
-/* تحسين انتقال الـ section */
-.sec {
-  opacity: 0;
-  animation: none;
-  transition: opacity .18s ease;
-}
-.sec.active {
-  opacity: 1;
-  display: block !important;
-}
+/* انتقال الأقسام — يتم عبر inline styles في go() فقط */
+/* لا opacity:0 هنا لأنه يُخفي الـ dashboard عند الدخول */
 .sec.fade-out {
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity .14s ease !important;
 }
 
 /* تحسين الـ modal */
@@ -1893,7 +1886,7 @@ thead th {
     <div class="ca">
 
 <!-- ════════════════ DASHBOARD ════════════════ -->
-<div id="sec-dashboard" class="sec" style="display:block">
+<div id="sec-dashboard" class="sec" style="display:none">
   <div class="ph">
     <div><h2 class="pt">لوحة التحكم</h2>
     <p class="ps" id="dash-date"></p></div>
@@ -2978,7 +2971,7 @@ const CACHE = {
 const APP = {
   _profile: null,
   _settings: {},
-  _currentSection: 'dashboard',
+  _currentSection: '',
 
   // ── Bootstrap ─────────────────────────────────────────────
   async boot() {
@@ -3143,7 +3136,8 @@ const APP = {
       btn.addEventListener('click', () => this.go(btn.dataset.nav));
     });
 
-    // تحميل لوحة التحكم فوراً + تهيئة الوحدات في الخلفية
+    // إظهار لوحة التحكم وتحميل بياناتها
+    this.go('dashboard');
     DASH.load().catch(e => console.warn('DASH.load:', e));
 
     // Pre-warm بيانات الوحدات الأساسية في الخلفية (لا تُعيق الـ UI)
@@ -3220,7 +3214,7 @@ const APP = {
     document.getElementById('page-title-top').textContent = this._titles[section] || section;
 
     // ── Smooth transition ──
-    if (prev && prev !== next) {
+    if (prev && prev !== next && prev.style.display !== 'none') {
       prev.style.opacity = '0';
       prev.style.pointerEvents = 'none';
       setTimeout(() => {
@@ -3230,21 +3224,30 @@ const APP = {
       }, 140);
     }
 
-    // Show next immediately (will animate via CSS opacity)
+    // Show next with smooth transition
     next.style.display = 'block';
-    next.style.opacity = '0';
-    next.style.transform = 'translateY(6px)';
-    requestAnimationFrame(() => {
+
+    // Skip animation on very first load (no previous section visible)
+    const skipAnim = !prev || prev.style.display === 'none';
+    if (skipAnim) {
+      next.style.opacity = '1';
+      next.style.transform = '';
+      this._navLock = false;
+    } else {
+      next.style.opacity = '0';
+      next.style.transform = 'translateY(6px)';
       requestAnimationFrame(() => {
-        next.style.transition = 'opacity .18s ease, transform .2s ease';
-        next.style.opacity = '1';
-        next.style.transform = 'translateY(0)';
-        setTimeout(() => {
-          next.style.transition = '';
-          this._navLock = false;
-        }, 200);
+        requestAnimationFrame(() => {
+          next.style.transition = 'opacity .18s ease, transform .2s ease';
+          next.style.opacity = '1';
+          next.style.transform = 'translateY(0)';
+          setTimeout(() => {
+            next.style.transition = '';
+            this._navLock = false;
+          }, 220);
+        });
       });
-    });
+    }
 
     this._currentSection = section;
 
