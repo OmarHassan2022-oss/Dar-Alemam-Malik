@@ -1693,6 +1693,107 @@ button .spin {
   .ca { padding: 16px !important; }
 }
 
+
+
+/* ════════════════════════════════════════════════════════════
+   ⚡ تحسينات الأداء — GPU / Paint / Layout
+   ════════════════════════════════════════════════════════════ */
+
+/* تسريع GPU للعناصر المتحركة */
+.sc, .panel, .mc2, .mb, .qb2, .btn, .nl, .ib {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* layout containment للأقسام */
+.sec {
+  contain: layout style;
+}
+.tw {
+  contain: layout;
+}
+
+/* تحسين انتقال الـ section */
+.sec {
+  opacity: 0;
+  animation: none;
+  transition: opacity .18s ease;
+}
+.sec.active {
+  opacity: 1;
+  display: block !important;
+}
+.sec.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* تحسين الـ modal */
+.mo {
+  will-change: opacity;
+}
+.mb {
+  will-change: transform, opacity;
+}
+
+/* تحسين السكرول */
+.tw, .sec, .sb {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* إزالة reflow من الجداول */
+table {
+  table-layout: fixed;
+}
+thead th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* تحسين الـ hover transitions */
+.nl, .sc, .qb2, .ib, .btn {
+  transition: transform .15s ease, box-shadow .15s ease,
+              background .12s ease, border-color .12s ease,
+              color .12s ease !important;
+}
+
+/* تسريع تبديل الثيم */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: .2s;
+  transition-timing-function: ease;
+}
+/* استثنِ العناصر التي لا تحتاج transition */
+.sec, table, thead, tbody, tr, td, th, .tw, .mb, .lw {
+  transition: none !important;
+}
+.btn, .nl, .sc, .qb2, .ib, .ic-btn, .tab {
+  transition: transform .15s ease, box-shadow .15s ease,
+              background-color .12s ease, border-color .12s ease,
+              color .12s ease !important;
+}
+
+/* إزالة layout shift من الأرقام */
+.sv, .dash-hero-stat-v {
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+}
+
+/* skeleton loading animation */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: .4; }
+  50%       { opacity: .8; }
+}
+.skeleton {
+  background: var(--card2);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* تحسين الـ scrollbar */
+.sb::-webkit-scrollbar { width: 3px; }
+.tw::-webkit-scrollbar { height: 4px; }
+
 </style>
 </head>
 <body>
@@ -2813,6 +2914,67 @@ function isAdmin() {
 }
 
 // ── APP CONTROLLER ───────────────────────────────────────────
+
+
+// ══ Debounce + Throttle utilities ════════════════════════════
+function debounce(fn, ms = 280) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+function throttle(fn, ms = 100) {
+  let last = 0;
+  return (...args) => {
+    const now = Date.now();
+    if (now - last >= ms) { last = now; fn.apply(this, args); }
+  };
+}
+
+// ══ Cache Manager — طبقة تخزين مؤقت ذكية ═══════════════════
+const CACHE = {
+  _store: new Map(),
+  // TTL بالميلي ثانية
+  TTL: {
+    students:    60_000,   // دقيقة واحدة
+    teachers:   120_000,   // دقيقتان
+    circles:    120_000,
+    surahs:  86_400_000,   // يوم كامل — بيانات ثابتة
+    settings:   300_000,   // 5 دقائق
+    default:     30_000,   // 30 ثانية
+  },
+
+  set(key, data) {
+    this._store.set(key, { data, ts: Date.now() });
+  },
+
+  get(key) {
+    const entry = this._store.get(key);
+    if (!entry) return null;
+    const ttl = this.TTL[key] ?? this.TTL.default;
+    if (Date.now() - entry.ts > ttl) {
+      this._store.delete(key);
+      return null;
+    }
+    return entry.data;
+  },
+
+  invalidate(...keys) {
+    if (!keys.length) { this._store.clear(); return; }
+    keys.forEach(k => this._store.delete(k));
+  },
+
+  // جلب مع cache — الوظيفة الأساسية
+  async fetch(key, fetchFn) {
+    const cached = this.get(key);
+    if (cached !== null) return cached;
+    const data = await fetchFn();
+    this.set(key, data);
+    return data;
+  },
+};
+
 const APP = {
   _profile: null,
   _settings: {},
@@ -2981,19 +3143,23 @@ const APP = {
       btn.addEventListener('click', () => this.go(btn.dataset.nav));
     });
 
-    // تهيئة جميع الوحدات
-    try {
-      await Promise.all([
+    // تحميل لوحة التحكم فوراً + تهيئة الوحدات في الخلفية
+    DASH.load().catch(e => console.warn('DASH.load:', e));
+
+    // Pre-warm بيانات الوحدات الأساسية في الخلفية (لا تُعيق الـ UI)
+    setTimeout(() => {
+      Promise.allSettled([
         TCH.init && TCH.init(),
         CIR.init && CIR.init(),
-        REC.init && REC.init(),
+      ]).catch(() => {});
+    }, 800);
+    setTimeout(() => {
+      Promise.allSettled([
+        REC.init  && REC.init(),
         PROG.init && PROG.init(),
-        GUA.init && GUA.init()
-      ]);
-    } catch(e) { console.log('Init error (non-fatal):', e); }
-
-    // تحميل لوحة التحكم
-    await DASH.load();
+        GUA.init  && GUA.init(),
+      ]).catch(() => {});
+    }, 1800);
   },
 
   // Safe badge update — idempotent, can be called multiple times
@@ -3031,40 +3197,63 @@ const APP = {
   },
 
   // ── Navigation (the ONLY place sections are switched) ──────
+  _titles: {
+    dashboard:'لوحة التحكم', students:'الطلاب', teachers:'المعلمون',
+    circles:'الحلقات', recitations:'التسميع اليومي', attendance:'الحضور والغياب',
+    progress:'تقدم الحفظ', activities:'المسابقات', certificates:'الشهادات',
+    guardian:'بوابة ولي الأمر', announcements:'الإشعارات والإعلانات',
+    finance:'المالية', reports:'التقارير', users:'المستخدمون', settings:'الإعدادات'
+  },
+  _navLock: false,
+
   go(section) {
-    // Hide current
+    if (this._navLock || section === this._currentSection) return;
+    this._navLock = true;
+
     const prev = document.getElementById('sec-' + this._currentSection);
-    if (prev) prev.style.display = 'none';
-
-    // Remove active from all nav
-    document.querySelectorAll('[data-nav]').forEach(b => b.classList.remove('on'));
-
-    // Show new
     const next = document.getElementById('sec-' + section);
-    if (next) next.style.display = 'block';
+    if (!next) { this._navLock = false; return; }
 
-    // Mark active nav
+    // ── Update nav indicators instantly ──
+    document.querySelectorAll('[data-nav]').forEach(b => b.classList.remove('on'));
     document.querySelectorAll(`[data-nav="${section}"]`).forEach(b => b.classList.add('on'));
+    document.getElementById('page-title-top').textContent = this._titles[section] || section;
 
-    // Update topbar title
-    const titles = {
-      dashboard:'لوحة التحكم', students:'الطلاب', teachers:'المعلمون',
-      circles:'الحلقات', recitations:'التسميع اليومي', attendance:'الحضور والغياب',
-      progress:'تقدم الحفظ', activities:'المسابقات', certificates:'الشهادات',
-      guardian:'بوابة ولي الأمر', announcements:'الإشعارات والإعلانات',
-      finance:'المالية', reports:'التقارير', users:'المستخدمون', settings:'الإعدادات'
-    };
-    document.getElementById('page-title-top').textContent = titles[section] || section;
+    // ── Smooth transition ──
+    if (prev && prev !== next) {
+      prev.style.opacity = '0';
+      prev.style.pointerEvents = 'none';
+      setTimeout(() => {
+        prev.style.display = 'none';
+        prev.style.opacity = '';
+        prev.style.pointerEvents = '';
+      }, 140);
+    }
+
+    // Show next immediately (will animate via CSS opacity)
+    next.style.display = 'block';
+    next.style.opacity = '0';
+    next.style.transform = 'translateY(6px)';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        next.style.transition = 'opacity .18s ease, transform .2s ease';
+        next.style.opacity = '1';
+        next.style.transform = 'translateY(0)';
+        setTimeout(() => {
+          next.style.transition = '';
+          this._navLock = false;
+        }, 200);
+      });
+    });
 
     this._currentSection = section;
 
-    // Initialize section — first visit loads, subsequent visits refresh data sections
+    // ── Data loading ──
     const alwaysRefresh = ['attendance','dashboard','announcements','finance','reports'];
     if (!this['_init_'+section]) {
       this['_init_'+section] = true;
       this.initSection(section);
     } else if (alwaysRefresh.includes(section)) {
-      // تحديث البيانات الديناميكية عند كل زيارة
       this.initSection(section);
     }
   },
@@ -3140,10 +3329,11 @@ const DASH = {
     if (tbAv && APP._profile?.full_name) tbAv.textContent = APP._profile.full_name.charAt(0);
 
     try {
+      // جلب الأعداد مع cache (تتغير نادراً خلال الجلسة)
       const [{ count: students }, { count: teachers }, { count: circles }] = await Promise.all([
-        DB.from('students').select('id',{count:'exact',head:true}).eq('is_active',true),
-        DB.from('teachers').select('id',{count:'exact',head:true}).eq('is_active',true),
-        DB.from('circles').select('id',{count:'exact',head:true}).eq('is_active',true),
+        CACHE.fetch('cnt_students', () => DB.from('students').select('id',{count:'exact',head:true}).eq('is_active',true)),
+        CACHE.fetch('cnt_teachers', () => DB.from('teachers').select('id',{count:'exact',head:true}).eq('is_active',true)),
+        CACHE.fetch('cnt_circles',  () => DB.from('circles').select('id',{count:'exact',head:true}).eq('is_active',true)),
       ]);
 
       const today = new Date().toISOString().split('T')[0];
@@ -3294,26 +3484,41 @@ const DASH = {
 // ══ STUDENTS ════════════════════════════════════════════════
 const STU = {
   _data: [], _id: null,
+  _debouncedFilter: null,
 
-  async load() {
+  async load(force = false) {
     const tbody = document.getElementById('stu-tbody');
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">جارٍ التحميل...</td></tr>';
 
-    const [stuRes, attRes, payRes] = await Promise.all([
-      DB.from('students').select(`*,circles(name,teacher:teachers(name))`).eq('is_active',true).order('name'),
-      // حضور آخر 30 يوم
-      DB.from('attendance').select('student_id,status')
-        .gte('session_date', new Date(Date.now()-30*864e5).toISOString().split('T')[0]),
-      // آخر دفعة لكل طالب
-      DB.from('payments').select('student_id,status,payment_month')
-        .order('payment_month',{ascending:false}).limit(500),
-    ]);
+    // عرض skeleton فوراً
+    tbody.innerHTML = Array(4).fill(
+      `<tr>${Array(7).fill('<td><div class="skeleton" style="height:14px;border-radius:4px"></div></td>').join('')}</tr>`
+    ).join('');
 
-    if (stuRes.error) {
-      tbody.innerHTML=`<tr><td colspan="7" class="empty">${stuRes.error.message}</td></tr>`;
-      return;
-    }
-    this._data = stuRes.data || [];
+    try {
+      // استخدام cache للطلاب والمدفوعات (ثابتة نسبياً)
+      if (force) CACHE.invalidate('students', 'pay_map', 'att_map');
+
+      const [stuData, attData, payData] = await Promise.all([
+        CACHE.fetch('students', async () => {
+          const { data, error } = await DB.from('students')
+            .select('*,circles(name,teacher:teachers(name))')
+            .eq('is_active', true).order('name');
+          if (error) throw error;
+          return data;
+        }),
+        CACHE.fetch('att_map', async () => {
+          const { data } = await DB.from('attendance').select('student_id,status')
+            .gte('session_date', new Date(Date.now()-30*864e5).toISOString().split('T')[0]);
+          return data || [];
+        }),
+        CACHE.fetch('pay_map', async () => {
+          const { data } = await DB.from('payments').select('student_id,status,payment_month')
+            .order('payment_month',{ascending:false}).limit(500);
+          return data || [];
+        }),
+      ]);
+
+      this._data = stuData || [];
 
     // بناء خرائط للأداء السريع
     this._attMap = {};
@@ -3454,20 +3659,26 @@ const STU = {
 const CIR = {
   _data: [], _id: null,
 
-  async load() {
+  async load(force = false) {
     const tbody = document.getElementById('cir-tbody');
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr>';
-    const { data, error } = await DB.from('circles')
-      .select('*,teachers(name)')
-      .eq('is_active',true).order('name');
-    if (error) { tbody.innerHTML=`<tr><td colspan="6" class="empty">${error.message}</td></tr>`; return; }
-    this._data = data||[];
-
-    // Count students per circle
-    const { data: stuCounts } = await DB.from('students')
-      .select('circle_id').eq('is_active',true);
-    const countMap = {};
-    (stuCounts||[]).forEach(s=>{ if(s.circle_id) countMap[s.circle_id]=(countMap[s.circle_id]||0)+1; });
+    tbody.innerHTML = Array(3).fill(`<tr>${Array(6).fill('<td><div class="skeleton" style="height:13px;border-radius:4px;margin:2px 0"></div></td>').join('')}</tr>`).join('');
+    try {
+      if (force) CACHE.invalidate('circles');
+      const [cirData, stuData] = await Promise.all([
+        CACHE.fetch('circles', async () => {
+          const { data, error } = await DB.from('circles').select('*,teachers(name)').eq('is_active',true).order('name');
+          if (error) throw error;
+          return data;
+        }),
+        CACHE.fetch('students_min', async () => {
+          const { data } = await DB.from('students').select('circle_id').eq('is_active',true);
+          return data || [];
+        }),
+      ]);
+      this._data = cirData || [];
+      const stuCounts = stuData;
+      const countMap = {};
+      stuCounts.forEach(s=>{ if(s.circle_id) countMap[s.circle_id]=(countMap[s.circle_id]||0)+1; });
 
     tbody.innerHTML = !this._data.length
       ? '<tr><td colspan="6" class="empty">لا توجد حلقات</td></tr>'
@@ -3757,14 +3968,28 @@ const GUA = {
 const FIN = {
   _data: [], _id: null, _tab: 'all',
 
-  async load() {
+  async load(force = false) {
     const tbody = document.getElementById('fin-tbody');
-    tbody.innerHTML = '<tr><td colspan="8" class="empty">جارٍ التحميل...</td></tr>';
-    let q = DB.from('payments').select('*,students(name)').order('created_at',{ascending:false}).limit(100);
-    if (this._tab !== 'all') q = q.eq('status', this._tab);
-    const { data, error } = await q;
-    if (error) { tbody.innerHTML=`<tr><td colspan="8" class="empty">${error.message}</td></tr>`; return; }
-    this._data = data||[];
+    tbody.innerHTML = Array(4).fill(
+      `<tr>${Array(8).fill('<td><div class="skeleton" style="height:13px;border-radius:4px;margin:2px 0"></div></td>').join('')}</tr>`
+    ).join('');
+    try {
+      const cacheKey = 'payments_' + (this._tab || 'all');
+      if (force) CACHE.invalidate(cacheKey, 'payments');
+      const data = await CACHE.fetch(cacheKey, async () => {
+        let q = DB.from('payments')
+          .select('id,student_id,amount,currency,payment_month,payment_date,method,status,students(name)')
+          .order('created_at',{ascending:false}).limit(100);
+        if (this._tab && this._tab !== 'all') q = q.eq('status', this._tab);
+        const { data, error } = await q;
+        if (error) throw error;
+        return data || [];
+      });
+      this._data = data;
+    } catch(err) {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty" style="color:var(--danger)">خطأ: ${err.message}</td></tr>`;
+      return;
+    }
     tbody.innerHTML = !this._data.length
       ? '<tr><td colspan="8" class="empty">لا توجد مدفوعات</td></tr>'
       : this._data.map((p,i)=>`
@@ -3785,6 +4010,7 @@ const FIN = {
 
   tab(t, btn) {
     this._tab = t;
+    CACHE.invalidate('payments_' + t);   // tab change = fresh data
     document.querySelectorAll('#fin-tabs .tab').forEach(b=>b.classList.remove('on'));
     btn.classList.add('on');
     this.load();
@@ -3846,8 +4072,9 @@ const FIN = {
       if (error) throw error;
 
       toast('✅ تم تسجيل الدفعة بنجاح', 'success');
+      CACHE.invalidate('payments', 'pay_map', 'cnt_students');
       this.closeModal();
-      await this.load();
+      await this.load(true);
     } catch(err) {
       const msg = err.message || JSON.stringify(err);
       if (msg.includes('violates row-level security')) {
@@ -4445,13 +4672,17 @@ const SET = {
 // ══ TEACHERS ═════════════════════════════════════════════════
 const TCH = {
   _data: [], _id: null,
-  async load() {
+  async load(force = false) {
     const tbody = document.getElementById('tch-tbody');
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr>';
-    const { data, error } = await DB.from('teachers')
-      .select('*').eq('is_active',true).order('name');
-    if (error) { tbody.innerHTML=`<tr><td colspan="6" class="empty">${error.message}</td></tr>`; return; }
-    this._data = data||[];
+    tbody.innerHTML = Array(3).fill(`<tr>${Array(6).fill('<td><div class="skeleton" style="height:13px;border-radius:4px;margin:2px 0"></div></td>').join('')}</tr>`).join('');
+    try {
+      if (force) CACHE.invalidate('teachers');
+      const data = await CACHE.fetch('teachers', async () => {
+        const { data, error } = await DB.from('teachers').select('*').eq('is_active',true).order('name');
+        if (error) throw error;
+        return data;
+      });
+      this._data = data || [];
     if (!this._data.length) { tbody.innerHTML='<tr><td colspan="6" class="empty">لا يوجد معلمون — أضف معلماً</td></tr>'; return; }
     tbody.innerHTML = this._data.map((t,i)=>`<tr>
       <td class="tn">${i+1}</td>
@@ -4674,16 +4905,26 @@ const REC = {
       (data||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   },
 
-  async load() {
+  async load(force = false) {
     const tbody = document.getElementById('rec-tbody2');
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">جارٍ التحميل...</td></tr>';
-    const { data, error } = await DB.from('recitations')
-      .select('*,students(name),circles(name)')
-      .order('session_date',{ascending:false})
-      .limit(100);
-    if (error) { tbody.innerHTML=`<tr><td colspan="7" class="empty">خطأ: ${error.message}</td></tr>`; return; }
-    this._data = data||[];
-    await this.filter();
+    tbody.innerHTML = Array(4).fill(
+      `<tr>${Array(7).fill('<td><div class="skeleton" style="height:13px;border-radius:4px;margin:2px 0"></div></td>').join('')}</tr>`
+    ).join('');
+    try {
+      if (force) CACHE.invalidate('recitations');
+      const data = await CACHE.fetch('recitations', async () => {
+        const { data, error } = await DB.from('recitations')
+          .select('id,student_id,circle_id,surah_name,surah_number,type,rating,score,session_date,tajweed_errors,notes,students(name),circles(name)')
+          .order('session_date', {ascending:false})
+          .limit(100);
+        if (error) throw error;
+        return data || [];
+      });
+      this._data = data;
+      await this.filter();
+    } catch(err) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty" style="color:var(--danger)">خطأ: ${err.message}</td></tr>`;
+    }
   },
 
   filter() {
@@ -4823,8 +5064,9 @@ const REC = {
       if (result.error) throw result.error;
 
       toast('✅ تم حفظ التسميع بنجاح', 'success');
+      CACHE.invalidate('recitations', 'cnt_students');
       this.closeModal();
-      await this.load();
+      await this.load(true);
     } catch(err) {
       console.error('REC.save:', err);
       const msg = err.message || JSON.stringify(err);
@@ -5124,13 +5366,16 @@ const ANN = {
     const tbody = document.getElementById('ann-tbody');
     tbody.innerHTML = '<tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr>';
     try {
-      const { data, error } = await DB.from('notifications')
-        .select('*')
-        .is('target_user_id', null)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      this._data = data || [];
+      // cache قصير المدى للإعلانات (30 ثانية)
+      this._data = await CACHE.fetch('announcements', async () => {
+        const { data, error } = await DB.from('notifications')
+          .select('id,title,body,type,target_role,is_read,created_at,created_by')
+          .is('target_user_id', null)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (error) throw error;
+        return data || [];
+      });
       this._render();
       // تحديث العداد في الشريط الجانبي
       this._updateBadge();
@@ -5229,6 +5474,7 @@ const ANN = {
       if (error) throw error;
 
       toast('✅ تم نشر الإعلان بنجاح', 'success');
+      CACHE.invalidate('announcements');
       this.closeModal();
       await this.load();
 
@@ -5271,6 +5517,7 @@ const ANN = {
       const { error } = await DB.from('notifications').delete().eq('id', id);
       if (error) throw error;
       toast('🗑️ تم حذف الإعلان', 'warn');
+      CACHE.invalidate('announcements');
       await this.load();
     } catch(err) {
       toast('خطأ في الحذف: ' + (err.message || err), 'error');
