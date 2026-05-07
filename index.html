@@ -14,13 +14,13 @@
    🎨 نظام الألوان الاحترافي - دار تحفيظ القرآن
    ══════════════════════════════════════════════════════ */
 :root{
-  /* الألوان الأساسية */
-  --P:#15803d;--P2:#166534;--P3:#14532d;
-  --Pl:#22c55e;--Pbg:rgba(21,128,61,.08);--Pbg2:rgba(21,128,61,.15);
-  --gold:#b45309;--gold2:#92400e;--Gbg:rgba(180,83,9,.08);
+  /* الألوان الأساسية — تُعاد تعريفها في CSS المحسّن أدناه */
+  --P:#0f5132;--P2:#0a3d22;--P3:#072d18;
+  --Pl:#1a7a47;--Pbg:rgba(15,81,50,.09);--Pbg2:rgba(15,81,50,.18);
+  --gold:#b8860b;--gold2:#8b6914;--Gbg:rgba(184,134,11,.08);
   --blue:#1d4ed8;--Bbg:rgba(29,78,216,.08);
   --purple:#6d28d9;--UPbg:rgba(109,40,217,.08);
-  --red:#dc2626;--Rbg:rgba(220,38,38,.08);
+  --red:#dc2626;--danger:#dc2626;--Rbg:rgba(220,38,38,.08);
   --teal:#0e7490;--Tbg:rgba(14,116,144,.08);
   --orange:#c2410c;--Obg:rgba(194,65,12,.08);
 
@@ -830,12 +830,7 @@ tbody tr:hover td{background:var(--card2)}
 
 /* ══ متغيرات الألوان المحسّنة ═══════════════════════════════════ */
 :root {
-  /* الألوان الإسلامية الفاخرة */
-  --P:#0f5132; --P2:#0a3d22; --P3:#072d18;
-  --Pl:#1a7a47; --Pm:#22a35e;
-  --Pbg:rgba(15,81,50,.09); --Pbg2:rgba(15,81,50,.18);
-  --gold:#b8860b; --gold2:#8b6914; --gold-lt:#d4a017;
-  --Gbg:rgba(184,134,11,.08);
+  /* ═ متغيرات التخطيط والألوان الإضافية ═ */
 
   /* خلفية النهار - أكثر نعومة */
   --bg:linear-gradient(160deg,#f0f7f3 0%,#f5f5f0 50%,#eef5fb 100%);
@@ -1293,16 +1288,7 @@ tbody tr:hover td {
 .pf { border-radius:10px !important; }
 
 /* ══ التوستات ════════════════════════════════════════════════════ */
-.toast-msg {
-  border-radius:16px !important;
-  font-weight:600 !important;
-  font-size:13.5px !important;
-  box-shadow:0 8px 32px rgba(0,0,0,.2) !important;
-}
-
-.toast-msg.success {
-  background:linear-gradient(135deg,#0f5132,#1a7a47) !important;
-}
+/* toast-msg styles already defined above — no duplicates */
 
 /* ══ صفحة تسجيل الدخول المحسّنة ═══════════════════════════════ */
 .lw {
@@ -2353,7 +2339,7 @@ tbody tr:hover td {
           <select class="fi" name="student_id" id="cert-stu-sel" required></select></div>
         <div class="fg2">
           <div class="fg"><label>نوع الشهادة</label>
-            <select class="fi" name="type">
+            <select class="fi" name="cert_type">
               <option value="juz_completion">إتمام جزء</option><option value="quran_completion">إتمام القرآن</option>
               <option value="excellence">شهادة تميز</option><option value="participation">شهادة مشاركة</option>
             </select></div>
@@ -2533,11 +2519,24 @@ const SURAHS_LIST = [
 // ── Toast ─────────────────────────────────────────────────────
 function toast(msg, type='info') {
   const c = document.getElementById('toast-c');
+  if (!c) return;
   const el = document.createElement('div');
-  el.className = `toast toast-${type==='success'?'ok':type==='error'?'err':type==='warn'?'warn':'info'}`;
+  // normalise type → CSS class on .toast-msg
+  const cls = type === 'error' ? 'error'
+             : type === 'success' ? 'success'
+             : type === 'warn'    ? 'warn'
+             : 'info';
+  el.className = 'toast-msg ' + cls;
+  el.style.cssText = 'margin-bottom:8px;display:block';
   el.textContent = msg;
   c.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+  // slide-in
+  el.animate([{opacity:0,transform:'translateY(-8px)'},{opacity:1,transform:'translateY(0)'}],
+             {duration:220,easing:'ease-out',fill:'forwards'});
+  setTimeout(() => {
+    el.animate([{opacity:1},{opacity:0}],{duration:200,fill:'forwards'})
+      .onfinish = () => el.remove();
+  }, 3800);
 }
 
 // ── Confirm dialog ───────────────────────────────────────────
@@ -2724,18 +2723,13 @@ const APP = {
     // Load settings
     await this.loadSettings();
 
-    // Show announcement count on sidebar button
+    // Show unread announcement count on sidebar (safe — no innerHTML concat)
     try {
       const { count } = await DB.from('notifications')
         .select('id', { count: 'exact', head: true })
         .is('target_user_id', null)
         .eq('is_read', false);
-      if (count > 0) {
-        document.querySelectorAll('[data-nav="announcements"]').forEach(btn => {
-          btn.innerHTML = btn.innerHTML.replace('</button>','') +
-            ` <span class="si-count" style="margin-right:auto;font-size:10px">${count}</span></button>`;
-        });
-      }
+      this._updateNotifBadge(count || 0);
     } catch(e) {}
 
     // Wire navigation
@@ -2756,6 +2750,32 @@ const APP = {
 
     // تحميل لوحة التحكم
     await DASH.load();
+  },
+
+  // Safe badge update — idempotent, can be called multiple times
+  _updateNotifBadge(count) {
+    // Sidebar nav button
+    document.querySelectorAll('[data-nav="announcements"]').forEach(btn => {
+      // Remove any existing badge span first
+      btn.querySelectorAll('.notif-count-badge').forEach(el => el.remove());
+      if (count > 0) {
+        const sp = document.createElement('span');
+        sp.className = 'notif-count-badge';
+        sp.style.cssText = 'margin-right:auto;font-size:10px;background:#ef4444;color:#fff;border-radius:9px;padding:1px 7px;font-weight:700;min-width:18px;text-align:center';
+        sp.textContent = count > 99 ? '99+' : count;
+        btn.appendChild(sp);
+      }
+    });
+    // Bell icon in topbar
+    const bell = document.getElementById('notif-badge');
+    if (bell) {
+      if (count > 0) {
+        bell.textContent = count > 99 ? '99+' : count;
+        bell.style.display = '';
+      } else {
+        bell.style.display = 'none';
+      }
+    }
   },
 
   async logout() {
@@ -2794,9 +2814,13 @@ const APP = {
 
     this._currentSection = section;
 
-    // Initialize section on first visit
+    // Initialize section — first visit loads, subsequent visits refresh data sections
+    const alwaysRefresh = ['attendance','dashboard','announcements','finance','reports'];
     if (!this['_init_'+section]) {
       this['_init_'+section] = true;
+      this.initSection(section);
+    } else if (alwaysRefresh.includes(section)) {
+      // تحديث البيانات الديناميكية عند كل زيارة
       this.initSection(section);
     }
   },
@@ -2884,17 +2908,13 @@ const DASH = {
         DB.from('recitations').select('id',{count:'exact',head:true}).eq('session_date',today),
       ]);
 
-      setVal('st-students', students||0);
-      setVal('st-teachers', teachers||0);
-      setVal('st-circles',  circles||0);
-      setVal('st-present',  present||0);
-      setVal('st-rec',      recs||0);
-      // setText not setVal for span elements
-      document.getElementById('st-students').textContent = students||0;
-      document.getElementById('st-teachers').textContent = teachers||0;
-      document.getElementById('st-circles').textContent  = circles||0;
-      document.getElementById('st-present').textContent  = present||0;
-      document.getElementById('st-rec').textContent      = recs||0;
+      // spans — use textContent directly
+      const _st = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v??0; };
+      _st('st-students', students||0);
+      _st('st-teachers', teachers||0);
+      _st('st-circles',  circles||0);
+      _st('st-present',  present||0);
+      _st('st-rec',      recs||0);
 
       // New stats
       const { count: acts }  = await DB.from('activities').select('id',{count:'exact',head:true}).eq('status','active');
@@ -2972,14 +2992,25 @@ const DASH = {
       document.getElementById('d-excused').textContent  = exc;
     }
 
-    // Weekly bars
+    // Weekly bars — استعلام واحد بدلاً من 7
     const barEl = document.getElementById('bar-chart');
     if (barEl) {
       const days = Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));return d;});
-      const counts = await Promise.all(days.map(async d=>{
-        const ds = d.toISOString().split('T')[0];
-        const { count } = await DB.from('recitations').select('id',{count:'exact',head:true}).eq('session_date',ds);
-        return { day:d.toLocaleDateString('ar-EG',{weekday:'short'}), count:count||0 };
+      const from7 = days[0].toISOString().split('T')[0];
+      const to7   = days[6].toISOString().split('T')[0];
+      // استعلام واحد يجلب كل التسميعات في 7 أيام
+      const { data: weekRecs } = await DB.from('recitations')
+        .select('session_date')
+        .gte('session_date', from7)
+        .lte('session_date', to7);
+      // تجميع محلي بدون استعلامات إضافية
+      const recByDay = {};
+      (weekRecs||[]).forEach(r => {
+        recByDay[r.session_date] = (recByDay[r.session_date] || 0) + 1;
+      });
+      const counts = days.map(d => ({
+        day:   d.toLocaleDateString('ar-EG',{weekday:'short'}),
+        count: recByDay[d.toISOString().split('T')[0]] || 0,
       }));
       const max = Math.max(...counts.map(r=>r.count), 1);
       const colors = ['#94a3b8','#64748b','#475569','#3b82f6','#2563eb','#16a34a','#22c55e'];
@@ -3023,11 +3054,37 @@ const STU = {
   async load() {
     const tbody = document.getElementById('stu-tbody');
     tbody.innerHTML = '<tr><td colspan="7" class="empty">جارٍ التحميل...</td></tr>';
-    const { data, error } = await DB.from('students')
-      .select(`*,circles(name,teacher:teachers(name))`)
-      .eq('is_active', true).order('name');
-    if (error) { tbody.innerHTML=`<tr><td colspan="7" class="empty">${error.message}</td></tr>`; return; }
-    this._data = data || [];
+
+    const [stuRes, attRes, payRes] = await Promise.all([
+      DB.from('students').select(`*,circles(name,teacher:teachers(name))`).eq('is_active',true).order('name'),
+      // حضور آخر 30 يوم
+      DB.from('attendance').select('student_id,status')
+        .gte('session_date', new Date(Date.now()-30*864e5).toISOString().split('T')[0]),
+      // آخر دفعة لكل طالب
+      DB.from('payments').select('student_id,status,payment_month')
+        .order('payment_month',{ascending:false}).limit(500),
+    ]);
+
+    if (stuRes.error) {
+      tbody.innerHTML=`<tr><td colspan="7" class="empty">${stuRes.error.message}</td></tr>`;
+      return;
+    }
+    this._data = stuRes.data || [];
+
+    // بناء خرائط للأداء السريع
+    this._attMap = {};
+    (attRes.data||[]).forEach(r => {
+      if (!this._attMap[r.student_id]) this._attMap[r.student_id] = {total:0,present:0};
+      this._attMap[r.student_id].total++;
+      if (r.status === 'present') this._attMap[r.student_id].present++;
+    });
+
+    // آخر دفعة لكل طالب (أحدث سجل)
+    this._payMap = {};
+    (payRes.data||[]).forEach(r => {
+      if (!this._payMap[r.student_id]) this._payMap[r.student_id] = r.status;
+    });
+
     document.getElementById('stu-total').textContent = this._data.length;
     this._renderTable(this._data);
     this._loadCircleFilter();
@@ -3044,8 +3101,22 @@ const STU = {
           <div class="cs">${s.guardian_phone||''}</div></div></div></td>
         <td><span class="badge bg-${s.category}">${CAT_LABELS[s.category]||s.category}</span></td>
         <td>${s.circles?.name||'—'}</td>
-        <td>—</td>
-        <td>—</td>
+        <td>${(() => {
+          const m = STU._attMap[s.id];
+          if (!m || !m.total) return '<span style="color:var(--th);font-size:12px">—</span>';
+          const pct = Math.round(m.present/m.total*100);
+          const col = pct>=80?'#16a34a':pct>=60?'#d97706':'#dc2626';
+          return `<span style="font-weight:700;color:${col}">${pct}%</span>
+                  <div style="width:48px;height:4px;background:var(--b2);border-radius:4px;margin-top:3px">
+                    <div style="width:${pct}%;height:100%;background:${col};border-radius:4px"></div></div>`;
+        })()}</td>
+        <td>${(() => {
+          const st = STU._payMap[s.id];
+          if (!st) return '<span style="color:var(--th);font-size:11px">—</span>';
+          const map = {paid:'✅ مدفوع',pending:'⏳ معلق',late:'⚠️ متأخر'};
+          const cls = {paid:'bg-ok',pending:'bg-wa',late:'bg-no'}[st]||'bg-in';
+          return `<span class="badge ${cls}" style="font-size:11px">${map[st]||st}</span>`;
+        })()}</td>
         <td><div class="ab">
           <button class="ib" onclick="STU.openEdit('${s.id}')" title="تعديل">✏️</button>
           <button class="ib" onclick="STU.del('${s.id}','${s.name}')" title="حذف">🗑️</button>
@@ -3166,6 +3237,7 @@ const CIR = {
           <td>${countMap[c.id]||0} / ${c.max_students||'—'}</td>
           <td><div class="ab">
             <button class="ib" onclick="CIR.openEdit('${c.id}')" title="تعديل">✏️</button>
+            <button class="ib" onclick="CIR.del('${c.id}','${c.name}')" title="إلغاء تفعيل" style="color:#ef4444">🔴</button>
           </div></td>
         </tr>`).join('');
   },
@@ -3195,6 +3267,18 @@ const CIR = {
     });
     await this._loadTeachers(document.getElementById('cir-teacher-sel'), c.teacher_id);
     document.getElementById('cir-modal').style.display = 'flex';
+  },
+
+  async del(id, name) {
+    const ok = await CONF.ask(`إلغاء تفعيل حلقة "${name}"؟
+(لن تُحذف البيانات، ستُوقف عن الظهور فقط)`, 'إلغاء التفعيل');
+    if (!ok) return;
+    try {
+      const { error } = await DB.from('circles').update({ is_active: false }).eq('id', id);
+      if (error) throw error;
+      toast('🔴 تم إلغاء تفعيل الحلقة', 'warn');
+      await this.load();
+    } catch(err) { toast('خطأ: ' + err.message, 'error'); }
   },
 
   closeModal() { document.getElementById('cir-modal').style.display='none'; },
@@ -3485,26 +3569,52 @@ const FIN = {
 
   async save(e) {
     e.preventDefault();
-    const raw = getForm('fin-form');
-    // payment_month in DB is DATE, input type=month gives YYYY-MM
-    const d = {
-      student_id:    raw.student_id,
-      amount:        parseFloat(raw.amount),
-      currency:      'ج.م.',
-      payment_month: raw.payment_month ? raw.payment_month + '-01' : null,
-      payment_date:  raw.payment_date || null,
-      method:        raw.method || 'cash',
-      status:        raw.status || 'paid',
-    };
-    console.log('FIN.save:', d);
+    const btn = e.target.querySelector('button[type=submit]');
+    const origTxt = btn?.textContent || 'حفظ';
+    if (btn) { btn.disabled=true; btn.textContent='جارٍ الحفظ...'; }
+
     try {
-      const { error } = await DB.from('payments').insert(d);
+      const raw = getForm('fin-form');
+
+      // التحقق من الحقول المطلوبة
+      if (!raw.student_id) {
+        toast('⚠️ اختر الطالب أولاً', 'error'); return;
+      }
+      if (!raw.amount || isNaN(parseFloat(raw.amount)) || parseFloat(raw.amount) <= 0) {
+        toast('⚠️ أدخل مبلغاً صحيحاً', 'error'); return;
+      }
+      if (!raw.payment_month) {
+        toast('⚠️ اختر شهر الدفع', 'error'); return;
+      }
+
+      const d = {
+        student_id:    raw.student_id,
+        amount:        parseFloat(raw.amount),
+        currency:      'ج.م.',
+        payment_month: raw.payment_month + '-01',   // DATE = YYYY-MM-01
+        payment_date:  raw.payment_date || null,
+        method:        raw.method || 'cash',
+        status:        raw.status || 'paid',
+        created_at:    new Date().toISOString(),
+      };
+
+      const { error } = await DB.from('payments').insert([d]);
       if (error) throw error;
-      toast('✅ تم تسجيل الدفعة', 'success');
-      this.closeModal(); await this.load();
+
+      toast('✅ تم تسجيل الدفعة بنجاح', 'success');
+      this.closeModal();
+      await this.load();
     } catch(err) {
-      console.error('FIN.save error:', err);
-      toast('خطأ: ' + err.message, 'error');
+      const msg = err.message || JSON.stringify(err);
+      if (msg.includes('violates row-level security')) {
+        toast('خطأ في الصلاحيات', 'error');
+      } else if (msg.includes('foreign key')) {
+        toast('خطأ: الطالب غير موجود في قاعدة البيانات', 'error');
+      } else {
+        toast('خطأ: ' + msg, 'error');
+      }
+    } finally {
+      if (btn) { btn.disabled=false; btn.textContent=origTxt; }
     }
   },
 
@@ -3699,8 +3809,8 @@ const REP = {
 
   async _finance(out, from, to) {
     const { data } = await DB.from('payments')
-      .select('*,students(name)').gte('created_at',from+'T00:00:00').lte('created_at',to+'T23:59:59')
-      .order('created_at',{ascending:false});
+      .select('*,students(name)').gte('payment_date',from).lte('payment_date',to)
+      .order('payment_date',{ascending:false});
     const total = (data||[]).filter(p=>p.status==='paid').reduce((s,p)=>s+parseFloat(p.amount||0),0);
     out.innerHTML = `
       <div style="margin-bottom:16px;padding:12px 16px;background:var(--Pbg);border-radius:8px;font-size:14px;font-weight:600;color:var(--P)">
@@ -4236,25 +4346,51 @@ const PROG = {
   closeModal() { document.getElementById('prog-modal').style.display='none'; },
   async save(e) {
     e.preventDefault();
-    const raw = getForm('prog-form');
-    const surah = SURAHS_LIST.find(s=>s.n==raw.surah_number);
-    const d = {
-      student_id:       raw.student_id,
-      surah_number:     parseInt(raw.surah_number),
-      surah_name:       surah?.name||'',
-      status:           raw.status||'in_progress',
-      completion_date:  raw.completion_date||null,
-    };
-    if (!d.completion_date) delete d.completion_date;
+    const btn = e.target.querySelector('button[type=submit]');
+    const origTxt = btn?.textContent || 'حفظ';
+    if (btn) { btn.disabled=true; btn.textContent='جارٍ الحفظ...'; }
+
     try {
+      const raw = getForm('prog-form');
+
+      if (!raw.student_id) { toast('⚠️ اختر الطالب', 'error'); return; }
+      if (!raw.surah_number) { toast('⚠️ اختر السورة', 'error'); return; }
+
+      const surahNum = parseInt(raw.surah_number);
+      const surah = SURAHS_LIST.find(s => s.n == surahNum);
+      const now = new Date().toISOString();
+
+      const d = {
+        student_id:      raw.student_id,
+        surah_number:    surahNum,
+        surah_name:      surah?.name || SURAHS[surahNum] || '',
+        status:          raw.status || 'in_progress',
+        completion_date: raw.completion_date || null,
+        created_at:      now,
+        updated_at:      now,
+      };
+
+      // لو لا يوجد تاريخ إتمام — احذفه (لتجنب null constraint)
+      if (!d.completion_date) delete d.completion_date;
+      // updated_at قد لا يوجد في بعض الإعدادات
+      if (!('updated_at' in d)) delete d.updated_at;
+
       const { error } = await DB.from('memorization_progress')
-        .upsert(d,{onConflict:'student_id,surah_number'});
+        .upsert([d], { onConflict: 'student_id,surah_number', ignoreDuplicates: false });
       if (error) throw error;
-      toast('✅ تم التسجيل','success');
+
+      toast('✅ تم تسجيل تقدم الحفظ', 'success');
       this.closeModal();
-      document.getElementById('prog-stu').value = d.student_id;
+      // الانتقال للطالب في قائمة التصفية
+      const progStu = document.getElementById('prog-stu');
+      if (progStu) progStu.value = d.student_id;
       await this.load();
-    } catch(err) { toast('خطأ: '+err.message,'error'); }
+    } catch(err) {
+      const msg = err.message || JSON.stringify(err);
+      toast('خطأ: ' + msg, 'error');
+    } finally {
+      if (btn) { btn.disabled=false; btn.textContent=origTxt; }
+    }
   },
   async del(id) {
     const ok = await CONF.ask('حذف هذا السجل؟'); if (!ok) return;
@@ -4264,6 +4400,23 @@ const PROG = {
 };
 
 // ══ RECITATIONS (التسميع) ═════════════════════════════════════
+// ══ قائمة السور (114 سورة) ═════════════════════════════════
+const SURAHS = {
+  1:'الفاتحة',2:'البقرة',3:'آل عمران',4:'النساء',5:'المائدة',6:'الأنعام',7:'الأعراف',8:'الأنفال',
+  9:'التوبة',10:'يونس',11:'هود',12:'يوسف',13:'الرعد',14:'إبراهيم',15:'الحجر',16:'النحل',17:'الإسراء',
+  18:'الكهف',19:'مريم',20:'طه',21:'الأنبياء',22:'الحج',23:'المؤمنون',24:'النور',25:'الفرقان',26:'الشعراء',
+  27:'النمل',28:'القصص',29:'العنكبوت',30:'الروم',31:'لقمان',32:'السجدة',33:'الأحزاب',34:'سبأ',35:'فاطر',
+  36:'يس',37:'الصافات',38:'ص',39:'الزمر',40:'غافر',41:'فصلت',42:'الشورى',43:'الزخرف',44:'الدخان',
+  45:'الجاثية',46:'الأحقاف',47:'محمد',48:'الفتح',49:'الحجرات',50:'ق',51:'الذاريات',52:'الطور',53:'النجم',
+  54:'القمر',55:'الرحمن',56:'الواقعة',57:'الحديد',58:'المجادلة',59:'الحشر',60:'الممتحنة',61:'الصف',62:'الجمعة',
+  63:'المنافقون',64:'التغابن',65:'الطلاق',66:'التحريم',67:'الملك',68:'القلم',69:'الحاقة',70:'المعارج',71:'نوح',
+  72:'الجن',73:'المزمل',74:'المدثر',75:'القيامة',76:'الإنسان',77:'المرسلات',78:'النبأ',79:'النازعات',80:'عبس',
+  81:'التكوير',82:'الإنفطار',83:'المطففين',84:'الانشقاق',85:'البروج',86:'الطارق',87:'الأعلى',88:'الغاشية',89:'الفجر',
+  90:'البلد',91:'الشمس',92:'الليل',93:'الضحى',94:'الشرح',95:'التين',96:'العلق',97:'القدر',98:'البينة',99:'الزلزلة',
+  100:'العاديات',101:'القارعة',102:'التكاثر',103:'العصر',104:'الهمزة',105:'الفيل',106:'قريش',107:'الماعون',108:'الكوثر',
+  109:'الكافرون',110:'النصر',111:'المسد',112:'الإخلاص',113:'الفلق',114:'الناس'
+};
+
 const REC = {
   _data: [], _id: null,
   _ratingLabels: {excellent:'ممتاز',good:'جيد جداً',acceptable:'جيد',weak:'مقبول'},
@@ -4330,60 +4483,116 @@ const REC = {
     document.getElementById('rec-stu-sel').innerHTML = '<option value="">— اختر طالباً —</option>'+
       (stus||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
     
-    // السور
-    const surahs = Array.from({length:114},(_, i)=>({num:i+1,name:SURAHS[i+1]}));
+    // السور — من Object.entries(SURAHS)
     document.getElementById('rec-surah-sel').innerHTML = '<option value="">— اختر السورة —</option>'+
-      surahs.map(s=>`<option value="${s.num}">${s.num} - ${s.name}</option>`).join('');
+      Object.entries(SURAHS).map(([n,name])=>`<option value="${n}">${n} - ${name}</option>`).join('');
   },
 
   async edit(id) {
-    const r = this._data.find(x=>x.id===id); if (!r) return;
+    const r = this._data.find(x => x.id === id); if (!r) return;
     this._id = id;
-    const f = document.getElementById('rec-form');
-    ['student_id','surah_number','type','session_date','verse_from','verse_to','rating','tajweed_errors','notes']
-      .forEach(k=>{
-        const el = f.querySelector(`[name=${k}]`); if (el) el.value = r[k]??'';
-      });
+
+    // نفتح المودال أولاً ثم نملأ الحقول
     document.getElementById('rec-modal').style.display = 'flex';
+    document.getElementById('rec-form').reset();
+
+    // نبني قوائم الطلاب والسور أولاً
+    const { data: stus } = await DB.from('students').select('id,name').eq('is_active',true).order('name');
+    const stuSel = document.getElementById('rec-stu-sel');
+    stuSel.innerHTML = '<option value="">— اختر طالباً —</option>' +
+      (stus||[]).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+
+    const surahSel = document.getElementById('rec-surah-sel');
+    surahSel.innerHTML = '<option value="">— اختر السورة —</option>' +
+      Object.entries(SURAHS).map(([n,name])=>`<option value="${n}">${n} - ${name}</option>`).join('');
+
+    // الآن نملأ القيم
+    stuSel.value  = r.student_id  || '';
+    surahSel.value = r.surah_number || '';
+
+    const f = document.getElementById('rec-form');
+    ['type','session_date','verse_from','verse_to','rating','tajweed_errors','pronunciation_errors','memorization_errors','notes']
+      .forEach(k => {
+        const el = f.querySelector(`[name=${k}]`);
+        if (el) el.value = r[k] ?? '';
+      });
   },
 
   closeModal() { document.getElementById('rec-modal').style.display='none'; this._id=null; },
 
   async save(e) {
     e.preventDefault();
-    const raw = getForm('rec-form');
-    if (!raw.student_id || !raw.surah_number || !raw.session_date) {
-      toast('أدخل الطالب والسورة والتاريخ','error'); return;
-    }
-    
-    const d = {
-      student_id: raw.student_id,
-      surah_number: parseInt(raw.surah_number),
-      surah_name: SURAHS[parseInt(raw.surah_number)]||'—',
-      type: raw.type || 'new_memorization',
-      session_date: raw.session_date,
-      verse_from: parseInt(raw.verse_from)||null,
-      verse_to: parseInt(raw.verse_to)||null,
-      rating: raw.rating || 'good',
-      tajweed_errors: parseInt(raw.tajweed_errors)||0,
-      pronunciation_errors: 0,
-      memorization_errors: 0,
-      score: this._calcScore(raw.rating, raw.tajweed_errors),
-      notes: raw.notes || null
-    };
+    const btn = e.target.querySelector('button[type=submit]');
+    const origTxt = btn?.textContent || 'حفظ';
+    if (btn) { btn.disabled=true; btn.textContent='جارٍ الحفظ...'; }
 
     try {
+      const raw = getForm('rec-form');
+      if (!raw.student_id) { toast('اختر الطالب أولاً','error'); return; }
+      if (!raw.surah_number) { toast('اختر السورة أولاً','error'); return; }
+      if (!raw.session_date) { toast('أدخل تاريخ الجلسة','error'); return; }
+
+      // جلب circle_id و teacher_id من بيانات الطالب
+      let circle_id = null, teacher_id = null;
+      if (!this._id) {
+        // إضافة جديدة — نجلب بيانات الطالب
+        const { data: stu } = await DB.from('students')
+          .select('circle_id, circles(teacher_id)')
+          .eq('id', raw.student_id)
+          .single();
+        if (stu) {
+          circle_id  = stu.circle_id || null;
+          teacher_id = stu.circles?.teacher_id || null;
+        }
+      } else {
+        // تعديل — نحافظ على circle_id الأصلي
+        const orig = this._data.find(x => x.id === this._id);
+        circle_id  = orig?.circle_id  || null;
+        teacher_id = orig?.teacher_id || null;
+      }
+
+      const surahNum = parseInt(raw.surah_number);
+      const d = {
+        student_id:           raw.student_id,
+        circle_id:            circle_id,
+        teacher_id:           teacher_id,
+        surah_number:         surahNum,
+        surah_name:           SURAHS[surahNum] || '—',
+        type:                 raw.type || 'new_memorization',
+        session_date:         raw.session_date,
+        verse_from:           parseInt(raw.verse_from) || null,
+        verse_to:             parseInt(raw.verse_to)   || null,
+        rating:               raw.rating || 'good',
+        tajweed_errors:       parseInt(raw.tajweed_errors) || 0,
+        pronunciation_errors: parseInt(raw.pronunciation_errors) || 0,
+        memorization_errors:  parseInt(raw.memorization_errors) || 0,
+        score:                this._calcScore(raw.rating, raw.tajweed_errors),
+        notes:                raw.notes || null,
+      };
+
       let result;
       if (this._id) {
-        result = await DB.from('recitations').update(d).eq('id',this._id);
+        result = await DB.from('recitations').update(d).eq('id', this._id);
       } else {
-        result = await DB.from('recitations').insert(d);
+        result = await DB.from('recitations').insert([d]);
       }
       if (result.error) throw result.error;
-      toast('✅ تم حفظ التسميع','success');
-      this.closeModal(); await this.load();
-    } catch(err) { 
-      toast('خطأ: '+(err.message||JSON.stringify(err)),'error');
+
+      toast('✅ تم حفظ التسميع بنجاح', 'success');
+      this.closeModal();
+      await this.load();
+    } catch(err) {
+      console.error('REC.save:', err);
+      const msg = err.message || JSON.stringify(err);
+      if (msg.includes('violates row-level security')) {
+        toast('خطأ في الصلاحيات — تأكد من تطبيق ملف SQL', 'error');
+      } else if (msg.includes('foreign key') || msg.includes('violates foreign')) {
+        toast('خطأ: بيانات مرتبطة غير موجودة', 'error');
+      } else {
+        toast('خطأ: ' + msg, 'error');
+      }
+    } finally {
+      if (btn) { btn.disabled=false; btn.textContent=origTxt; }
     }
   },
 
@@ -4400,23 +4609,6 @@ const REC = {
       toast('تم الحذف','warn'); await this.load();
     } catch(err) { toast('خطأ: '+err.message,'error'); }
   }
-};
-
-// ══ قائمة السور (114 سورة) ═════════════════════════════════
-const SURAHS = {
-  1:'الفاتحة',2:'البقرة',3:'آل عمران',4:'النساء',5:'المائدة',6:'الأنعام',7:'الأعراف',8:'الأنفال',
-  9:'التوبة',10:'يونس',11:'هود',12:'يوسف',13:'الرعد',14:'إبراهيم',15:'الحجر',16:'النحل',17:'الإسراء',
-  18:'الكهف',19:'مريم',20:'طه',21:'الأنبياء',22:'الحج',23:'المؤمنون',24:'النور',25:'الفرقان',26:'الشعراء',
-  27:'النمل',28:'القصص',29:'العنكبوت',30:'الروم',31:'لقمان',32:'السجدة',33:'الأحزاب',34:'سبأ',35:'فاطر',
-  36:'يس',37:'الصافات',38:'ص',39:'الزمر',40:'غافر',41:'فصلت',42:'الشورى',43:'الزخرف',44:'الدخان',
-  45:'الجاثية',46:'الأحقاف',47:'محمد',48:'الفتح',49:'الحجرات',50:'ق',51:'الذاريات',52:'الطور',53:'النجم',
-  54:'القمر',55:'الرحمن',56:'الواقعة',57:'الحديد',58:'المجادلة',59:'الحشر',60:'الممتحنة',61:'الصف',62:'الجمعة',
-  63:'المنافقون',64:'التغابن',65:'الطلاق',66:'التحريم',67:'الملك',68:'القلم',69:'الحاقة',70:'المعارج',71:'نوح',
-  72:'الجن',73:'المزمل',74:'المدثر',75:'القيامة',76:'الإنسان',77:'المرسلات',78:'النبأ',79:'النازعات',80:'عبس',
-  81:'التكوير',82:'الإنفطار',83:'المطففين',84:'الانشقاق',85:'البروج',86:'الطارق',87:'الأعلى',88:'الغاشية',89:'الفجر',
-  90:'البلد',91:'الشمس',92:'الليل',93:'الضحى',94:'الشرح',95:'التين',96:'العلق',97:'القدر',98:'البينة',99:'الزلزلة',
-  100:'العاديات',101:'القارعة',102:'التكاثر',103:'العصر',104:'الهمزة',105:'الفيل',106:'قريش',107:'الماعون',108:'الكوثر',
-  109:'الكافرون',110:'النصر',111:'المسد',112:'الإخلاص',113:'الفلق',114:'الناس'
 };
 
 
@@ -4436,7 +4628,7 @@ const CERT = {
       : this._data.map((cert,i)=>`<tr>
           <td class="tn">${i+1}</td>
           <td class="cm">${cert.students?.name||'—'}</td>
-          <td><span class="badge bg-ok">${this._typeLabels[cert.type]||cert.type}</span></td>
+          <td><span class="badge bg-ok">${this._typeLabels[cert.cert_type]||cert.cert_type}</span></td>
           <td style="font-size:12px;color:var(--ts);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cert.description||'—'}</td>
           <td class="td">${fmtDate(cert.issue_date)}</td>
           <td><div class="ab">
@@ -4457,11 +4649,14 @@ const CERT = {
   async save(e) {
     e.preventDefault();
     const raw = getForm('cert-form');
+    if (!raw.student_id) { toast('اختر الطالب أولاً','error'); return; }
     const d = {
       student_id:  raw.student_id,
-      type:        raw.type||'juz_completion',
+      cert_type:   raw.cert_type||'juz_completion',
       description: raw.description||null,
       issue_date:  raw.issue_date||new Date().toISOString().split('T')[0],
+      issued_by:   APP._profile?.id || null,
+      created_at:  new Date().toISOString(),
     };
     try {
       const { error } = await DB.from('certificates').insert(d);
@@ -4478,7 +4673,7 @@ const CERT = {
   async print(id) {
     const cert = this._data.find(x=>x.id===id); if (!cert) return;
     const dar = APP._settings.dar_name||'دار الإمام مالك';
-    const title = this._typeLabels[cert.type]||'شهادة';
+    const title = this._typeLabels[cert.cert_type]||'شهادة';
     const date = cert.issue_date ? new Date(cert.issue_date).toLocaleDateString('ar-EG',{year:'numeric',month:'long',day:'numeric'}) : '';
     document.getElementById('cert-org-name').textContent = dar;
     document.getElementById('cert-heading').textContent  = title;
@@ -4488,6 +4683,179 @@ const CERT = {
     document.getElementById('cert-print').style.display='block';
     setTimeout(()=>{ window.print(); document.getElementById('cert-print').style.display='none'; },300);
   }
+};
+
+// ══ ATTENDANCE ════════════════════════════════════════════════
+const ATT = {
+  _data:    [],   // students loaded
+  _records: {},   // { student_id: {status, notes, id} }
+  _date:    null,
+  _circleId: null,
+
+  async init() {
+    // ملء قائمة الحلقات
+    const { data } = await DB.from('circles')
+      .select('id,name').eq('is_active',true).order('name');
+    const sel = document.getElementById('att-circle');
+    if (sel) {
+      sel.innerHTML = '<option value="">جميع الحلقات</option>' +
+        (data||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+    }
+    // تعيين تاريخ اليوم تلقائياً
+    const dateEl = document.getElementById('att-date');
+    if (dateEl && !dateEl.value) {
+      dateEl.value = new Date().toISOString().split('T')[0];
+    }
+    await this.load();
+  },
+
+  async load() {
+    const tbody = document.getElementById('att-tbody');
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">جارٍ التحميل...</td></tr>';
+
+    this._date     = document.getElementById('att-date')?.value || new Date().toISOString().split('T')[0];
+    this._circleId = document.getElementById('att-circle')?.value || '';
+
+    try {
+      // جلب الطلاب
+      let stuQ = DB.from('students').select('id,name,circle_id,circles(name)').eq('is_active',true).order('name');
+      if (this._circleId) stuQ = stuQ.eq('circle_id', this._circleId);
+      const { data: students, error: stuErr } = await stuQ;
+      if (stuErr) throw stuErr;
+      this._data = students || [];
+
+      // جلب سجلات الحضور لهذا التاريخ
+      let attQ = DB.from('attendance').select('*').eq('session_date', this._date);
+      if (this._circleId) attQ = attQ.eq('circle_id', this._circleId);
+      const { data: records } = await attQ;
+
+      // بناء خريطة الحضور
+      this._records = {};
+      (records||[]).forEach(r => {
+        this._records[r.student_id] = { status: r.status, notes: r.notes||'', id: r.id };
+      });
+
+      this._render();
+    } catch(err) {
+      console.error('ATT.load:', err);
+      tbody.innerHTML = `<tr><td colspan="4" class="empty" style="color:var(--danger)">خطأ: ${err.message}</td></tr>`;
+    }
+  },
+
+  _render() {
+    const tbody = document.getElementById('att-tbody');
+    if (!this._data.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">لا يوجد طلاب — اختر حلقة أو أضف طلاباً أولاً</td></tr>';
+      return;
+    }
+    tbody.innerHTML = this._data.map(s => {
+      const rec    = this._records[s.id] || {};
+      const status = rec.status || 'present';
+      const notes  = rec.notes  || '';
+      const statusOpts = [
+        {v:'present', l:'✅ حاضر',   c:'#16a34a'},
+        {v:'absent',  l:'❌ غائب',   c:'#dc2626'},
+        {v:'late',    l:'⏰ متأخر',  c:'#d97706'},
+        {v:'excused', l:'📋 بعذر',   c:'#2563eb'},
+      ];
+      const selOpts = statusOpts.map(o =>
+        `<option value="${o.v}" ${status===o.v?'selected':''}>${o.l}</option>`
+      ).join('');
+      const col = statusOpts.find(o=>o.v===status)?.c || '#16a34a';
+      return `<tr>
+        <td class="cm" style="font-weight:700">${escHtml(s.name)}</td>
+        <td style="font-size:12px;color:var(--ts)">${escHtml(s.circles?.name||'—')}</td>
+        <td>
+          <select class="fi" style="padding:6px 10px;font-size:13px;min-width:120px;border-color:${col}"
+            onchange="ATT._setStatus('${s.id}',this.value)">
+            ${selOpts}
+          </select>
+        </td>
+        <td>
+          <input class="fi" style="padding:6px 10px;font-size:12px" placeholder="ملاحظة..."
+            value="${escHtml(notes)}"
+            onchange="ATT._setNotes('${s.id}',this.value)"/>
+        </td>
+      </tr>`;
+    }).join('');
+  },
+
+  _setStatus(studentId, status) {
+    if (!this._records[studentId]) this._records[studentId] = {status:'present',notes:'',id:null};
+    this._records[studentId].status = status;
+    // تلوين حدود الـ select بناءً على الحالة
+    const cols = {present:'#16a34a',absent:'#dc2626',late:'#d97706',excused:'#2563eb'};
+    event.target.style.borderColor = cols[status] || '#16a34a';
+  },
+
+  _setNotes(studentId, notes) {
+    if (!this._records[studentId]) this._records[studentId] = {status:'present',notes:'',id:null};
+    this._records[studentId].notes = notes;
+  },
+
+  async markAll(status) {
+    // تحذير إذا لم تُختر حلقة محددة
+    if (!this._circleId && this._data.length > 20) {
+      const ok = await CONF.ask(
+        `سيتم تعليم ${this._data.length} طالب من جميع الحلقات.
+هل تريد الاستمرار؟`,
+        'تحديد الكل'
+      );
+      if (!ok) return;
+    }
+    if (!this._data.length) {
+      toast('لا يوجد طلاب للتحديد — اختر تاريخاً أو حلقة', 'warn');
+      return;
+    }
+    this._data.forEach(s => {
+      if (!this._records[s.id]) this._records[s.id] = {status, notes:'', id:null};
+      else this._records[s.id].status = status;
+    });
+    this._render();
+    const lbl = {present:'✅ حاضر', absent:'❌ غائب', late:'⏰ متأخر', excused:'📋 بعذر'}[status] || status;
+    const circle = this._circleId
+      ? document.querySelector(`#att-circle option[value="${this._circleId}"]`)?.textContent || 'الحلقة المختارة'
+      : 'جميع الحلقات';
+    toast(`تم تحديد ${this._data.length} طالب (${lbl}) — ${circle}`, 'info');
+  },
+
+  async saveAll() {
+    if (!this._data.length) { toast('لا يوجد طلاب لحفظ حضورهم','warn'); return; }
+    const btn = document.querySelector('.btn[onclick="ATT.saveAll()"]');
+    const origTxt = btn?.textContent || 'حفظ';
+    if (btn) { btn.disabled=true; btn.textContent='جارٍ الحفظ...'; }
+
+    try {
+      // نبني upsert payload لجميع الطلاب
+      const rows = this._data.map(s => {
+        const rec = this._records[s.id] || {status:'present',notes:'',id:null};
+        return {
+          student_id:   s.id,
+          circle_id:    s.circle_id,
+          session_date: this._date,
+          status:       rec.status || 'present',
+          notes:        rec.notes  || null,
+        };
+      });
+
+      const { error } = await DB.from('attendance')
+        .upsert(rows, { onConflict: 'student_id,session_date' });
+      if (error) throw error;
+
+      toast(`✅ تم حفظ حضور ${rows.length} طالب`, 'success');
+      await this.load(); // إعادة تحميل للحصول على IDs الجديدة
+    } catch(err) {
+      console.error('ATT.saveAll:', err);
+      const msg = err.message || JSON.stringify(err);
+      if (msg.includes('violates row-level security')) {
+        toast('خطأ في الصلاحيات — تأكد من تطبيق ملف SQL', 'error');
+      } else {
+        toast('خطأ في الحفظ: ' + msg, 'error');
+      }
+    } finally {
+      if (btn) { btn.disabled=false; btn.textContent=origTxt; }
+    }
+  },
 };
 
 // ══ ANNOUNCEMENTS ═════════════════════════════════════════════
@@ -4567,23 +4935,9 @@ const ANN = {
 
   _updateBadge() {
     const unread = this._data.filter(a => !a.is_read).length;
-    // شارة الشريط الجانبي
-    document.querySelectorAll('[data-nav="announcements"]').forEach(btn => {
-      const old = btn.querySelector('.ann-badge');
-      if (old) old.remove();
-      if (unread > 0) {
-        const sp = document.createElement('span');
-        sp.className = 'ann-badge si-count';
-        sp.style.cssText = 'margin-right:auto;font-size:10px;background:#ef4444;color:#fff;border-radius:9px;padding:1px 7px;font-weight:700';
-        sp.textContent = unread;
-        btn.appendChild(sp);
-      }
-    });
-    // شارة الجرس في الشريط العلوي
-    const bell = document.getElementById('notif-badge');
-    if (bell) {
-      if (unread > 0) { bell.textContent = unread; bell.style.display = ''; }
-      else bell.style.display = 'none';
+    // توحيد التحديث عبر APP._updateNotifBadge
+    if (typeof APP !== 'undefined' && APP._updateNotifBadge) {
+      APP._updateNotifBadge(unread);
     }
   },
 
