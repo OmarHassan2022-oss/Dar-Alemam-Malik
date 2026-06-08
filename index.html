@@ -2045,7 +2045,7 @@ thead th {
   <div class="ph">
     <div><h2 class="pt">إدارة الطلاب</h2>
     <p class="ps">إجمالي: <span id="stu-total">0</span> طالب</p></div>
-    <button class="btn btn-p" onclick="STU.openAdd()">+ إضافة طالب</button>
+    <button class="btn btn-p" onclick="STU.openAdd()" style="display:${canDo('edit','students')?'':'none'}">+ إضافة طالب</button>
   </div>
   <div class="fb">
     <input class="fs fs-in" id="stu-search" placeholder="بحث بالاسم..." oninput="STU.filter()"/>
@@ -2605,7 +2605,7 @@ thead th {
 <!-- TEACHERS -->
 <div id="sec-teachers" class="sec">
   <div class="ph"><div><h2 class="pt">المعلمون</h2><p class="ps">إدارة المحفظين</p></div>
-    <button class="btn btn-p" onclick="TCH.openAdd()">+ إضافة معلم</button></div>
+    <button class="btn btn-p" onclick="TCH.openAdd()" style="display:${canDo('edit','teachers')?'':'none'}">+ إضافة معلم</button></div>
   <div class="tw">
     <table><thead><tr><th>#</th><th>المعلم</th><th>المؤهل</th><th>الهاتف</th><th>حلقاته</th><th>إجراءات</th></tr></thead>
     <tbody id="tch-tbody"><tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr></tbody></table>
@@ -2909,6 +2909,55 @@ function isAdmin() {
 // ── APP CONTROLLER ───────────────────────────────────────────
 
 
+
+// ══════════════════════════════════════════════════════════════
+// نظام الصلاحيات الشامل
+// ══════════════════════════════════════════════════════════════
+const PERMISSIONS = {
+  admin_system: { sections: '*', canEdit: '*', canDelete: '*' },
+  admin_general: { sections: '*', canEdit: '*', canDelete: '*' },
+  supervisor: {
+    sections: ['dashboard','students','teachers','circles','recitations','attendance',
+               'progress','activities','certificates','guardian','announcements','finance','reports'],
+    canEdit: ['students','teachers','circles','recitations','attendance','progress',
+              'activities','certificates','announcements','finance'],
+    canDelete: ['recitations','attendance','progress'],
+  },
+  teacher: {
+    sections: ['dashboard','circles','recitations','attendance','progress','reports'],
+    canEdit: ['recitations','attendance','progress'],
+    canDelete: [],
+  },
+};
+
+function canDo(action, section) {
+  const role = APP._profile?.role || 'teacher';
+  const perms = PERMISSIONS[role];
+  if (!perms) return false;
+  if (action === 'view') {
+    if (perms.sections === '*') return true;
+    return perms.sections.includes(section);
+  }
+  if (action === 'edit') {
+    if (perms.canEdit === '*') return true;
+    return perms.canEdit?.includes(section) || false;
+  }
+  if (action === 'delete') {
+    if (perms.canDelete === '*') return true;
+    return perms.canDelete?.includes(section) || false;
+  }
+  return false;
+}
+
+function applyRoleVisibility(role) {
+  const allowed = PERMISSIONS[role]?.sections || PERMISSIONS.teacher.sections;
+  if (allowed === '*') return;
+  document.querySelectorAll('[data-nav]').forEach(btn => {
+    const section = btn.dataset.nav;
+    if (!allowed.includes(section)) btn.style.display = 'none';
+  });
+}
+
 // ══ Debounce + Throttle utilities ════════════════════════════
 function debounce(fn, ms = 280) {
   let t;
@@ -2972,6 +3021,14 @@ const APP = {
   _profile: null,
   _settings: {},
   _currentSection: '',
+
+
+
+
+
+
+
+
 
   // ── Bootstrap ─────────────────────────────────────────────
   async boot() {
@@ -3102,6 +3159,9 @@ const APP = {
     }
 
     this._profile = prof;
+
+    // تطبيق صلاحيات العرض بناءً على الدور
+    applyRoleVisibility(prof.role);
 
     // Show app
     document.body.className = '';
@@ -3273,7 +3333,11 @@ const APP = {
       else if (s==='certificates')  await CERT.load();
       else if (s==='guardian')      await GUA.init();
       else if (s==='announcements') await ANN.load();
-      else if (s==='finance')       await FIN.load();
+      else if (s==='revenues')             await REV.load();
+      else if (s==='expenses')             await EXP.load();
+      else if (s==='finance-summary')      await FIN_SUM.load();
+      else if (s==='teacher-attendance')   await TCH_ATT.init();
+      else if (s==='teacher-performance')  await TCH_PERF.load();
       else if (s==='reports')       REP.init();
       else if (s==='users')         await USR.load();
       else if (s==='settings')      await SET.load();
@@ -3676,7 +3740,12 @@ const CIR = {
       if (force) CACHE.invalidate('circles');
       const [cirData, stuData] = await Promise.all([
         CACHE.fetch('circles', async () => {
-          const { data, error } = await DB.from('circles').select('*,teachers(name)').eq('is_active',true).order('name');
+          let q = DB.from('circles').select('*,teachers(name)').eq('is_active',true);
+          const role = APP._profile?.role;
+          const userId = APP._profile?.id;
+          if (role === 'teacher' && userId) q = q.eq('teacher_id', userId);
+          q = q.order('name');
+          const { data, error } = await q;
           if (error) throw error;
           return data;
         }),
@@ -3701,7 +3770,7 @@ const CIR = {
             <td>${countMap[c.id]||0} / ${c.max_students||'—'}</td>
             <td><div class="ab">
               <button class="ib" onclick="CIR.openEdit('${c.id}')" title="تعديل">✏️</button>
-              <button class="ib" onclick="CIR.del('${c.id}','${c.name}')" title="إلغاء تفعيل" style="color:#ef4444">🔴</button>
+              <button class="ib" onclick="CIR.del('${c.id}','${c.name.replace(/'/g,"\\'")}')" title="إلغاء تفعيل" style="color:#ef4444">🔴</button>
             </div></td>
           </tr>`).join('');
 
@@ -4709,8 +4778,8 @@ const TCH = {
         <td class="td" dir="ltr">${t.phone||'—'}</td>
         <td>—</td>
         <td><div class="ab">
-          <button class="ib" onclick="TCH.openEdit('${t.id}')" title="تعديل">✏️</button>
-          <button class="ib" onclick="TCH.del('${t.id}','${t.name}')" title="حذف">🗑️</button>
+          ${canDo('edit','teachers') ? `<button class="ib" onclick="TCH.openEdit('${t.id}')" title="تعديل">✏️</button>` : ''}
+          ${canDo('delete','teachers') ? `<button class="ib" onclick="TCH.del('${t.id}','${t.name}')" title="حذف">🗑️</button>` : ''}
         </div></td></tr>`).join('');
 
     } catch(err) {
@@ -4935,10 +5004,14 @@ const REC = {
     try {
       if (force) CACHE.invalidate('recitations');
       const data = await CACHE.fetch('recitations', async () => {
-        const { data, error } = await DB.from('recitations')
-          .select('id,student_id,circle_id,surah_name,surah_number,type,rating,score,session_date,tajweed_errors,notes,students(name),circles(name)')
+        let q = DB.from('recitations')
+          .select('id,student_id,circle_id,teacher_id,surah_name,surah_number,type,rating,score,session_date,tajweed_errors,notes,students(name),circles(name)')
           .order('session_date', {ascending:false})
           .limit(100);
+        const role = APP._profile?.role;
+        const userId = APP._profile?.id;
+        if (role === 'teacher' && userId) q = q.eq('teacher_id', userId);
+        const { data, error } = await q;
         if (error) throw error;
         return data || [];
       });
@@ -4973,8 +5046,8 @@ const REC = {
           <td><span class="badge ${this._ratingBadge[r.rating]||'bg-wa'}">${this._ratingLabels[r.rating]||r.rating}</span></td>
           <td class="td">${fmtDate(r.session_date)}</td>
           <td><div class="ab">
-            <button class="ib" onclick="REC.edit('${r.id}')" title="تعديل">✏️</button>
-            <button class="ib" onclick="REC.del('${r.id}')" title="حذف">🗑️</button>
+            ${canDo('edit','recitations') ? `<button class="ib" onclick="REC.edit('${r.id}')" title="تعديل">✏️</button>` : ''}
+            ${canDo('delete','recitations') ? `<button class="ib" onclick="REC.del('${r.id}')" title="حذف">🗑️</button>` : ''}
           </div></td></tr>`).join('');
   },
 
@@ -5066,6 +5139,7 @@ const REC = {
         surah_number:         surahNum,
         surah_name:           SURAHS[surahNum] || '—',
         type:                 raw.type || 'new_memorization',
+        with_repetition:      raw.with_repetition === 'true',
         session_date:         raw.session_date,
         verse_from:           parseInt(raw.verse_from) || null,
         verse_to:             parseInt(raw.verse_to)   || null,
@@ -5226,8 +5300,12 @@ const ATT = {
 
     try {
       // جلب الطلاب
-      let stuQ = DB.from('students').select('id,name,circle_id,circles(name)').eq('is_active',true).order('name');
+      let stuQ = DB.from('students').select('id,name,circle_id,circles!inner(name,teacher_id)').eq('is_active',true);
+      const role = APP._profile?.role;
+      const userId = APP._profile?.id;
+      if (role === 'teacher' && userId) stuQ = stuQ.eq('circles.teacher_id', userId);
       if (this._circleId) stuQ = stuQ.eq('circle_id', this._circleId);
+      stuQ = stuQ.order('name');
       const { data: students, error: stuErr } = await stuQ;
       if (stuErr) throw stuErr;
       this._data = students || [];
@@ -5260,12 +5338,11 @@ const ATT = {
       const rec    = this._records[s.id] || {};
       const status = rec.status || 'present';
       const notes  = rec.notes  || '';
-      const statusOpts = [
-        {v:'present', l:'✅ حاضر',   c:'#16a34a'},
-        {v:'absent',  l:'❌ غائب',   c:'#dc2626'},
-        {v:'late',    l:'⏰ متأخر',  c:'#d97706'},
-        {v:'excused', l:'📋 بعذر',   c:'#2563eb'},
-      ];
+      const role = APP._profile?.role;
+      const statusOpts = role === 'teacher'
+        ? [{v:'present', l:'✅ حاضر', c:'#16a34a'}, {v:'absent', l:'❌ غائب', c:'#dc2626'}]
+        : [{v:'present', l:'✅ حاضر', c:'#16a34a'}, {v:'absent', l:'❌ غائب', c:'#dc2626'},
+           {v:'late', l:'⏰ متأخر', c:'#d97706'}, {v:'excused', l:'📋 بعذر', c:'#2563eb'}];
       const selOpts = statusOpts.map(o =>
         `<option value="${o.v}" ${status===o.v?'selected':''}>${o.l}</option>`
       ).join('');
@@ -5558,6 +5635,803 @@ function roleLabel(role) {
   return m[role] || role;
 }
 APP.boot();
+
+
+// ══ TEACHER ATTENDANCE ═════════════════════════════════════════
+const TCH_ATT = {
+  _data: [], _id: null,
+
+  async init() {
+    document.getElementById('tatt-date').valueAsDate = new Date();
+    await this.loadTeacherSelect();
+    await this.load();
+  },
+
+  async loadTeacherSelect() {
+    const sel = document.getElementById('tatt-teacher-sel');
+    const { data } = await DB.from('teachers').select('id,name').eq('is_active',true).order('name');
+    sel.innerHTML = (data||[]).map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    const sel2 = document.getElementById('tatt-teacher');
+    sel2.innerHTML = '<option value="">جميع المعلمين</option>' + (data||[]).map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  },
+
+  async load() {
+    const tbody = document.getElementById('tatt-tbody');
+    tbody.innerHTML = '<tr><td colspan="7" class="load">جارٍ التحميل...</td></tr>';
+    try {
+      const date = document.getElementById('tatt-date')?.value || new Date().toISOString().split('T')[0];
+      const teacherId = document.getElementById('tatt-teacher')?.value;
+      let q = DB.from('teacher_attendance').select('*,teachers(name)').eq('session_date', date);
+      if (teacherId) q = q.eq('teacher_id', teacherId);
+      const { data, error } = await q;
+      if (error) throw error;
+      this._data = data || [];
+      tbody.innerHTML = !data.length ? '<tr><td colspan="7" class="empty">لا توجد سجلات</td></tr>'
+        : data.map(a => `<tr>
+          <td>${a.teachers?.name||'—'}</td>
+          <td>${new Date(a.session_date).toLocaleDateString('ar-EG')}</td>
+          <td>${a.check_in||'—'}</td>
+          <td>${a.check_out||'—'}</td>
+          <td>${a.work_hours ? a.work_hours.toFixed(1) + ' ساعة' : '—'}</td>
+          <td><span class="badge ${a.status==='present'?'bg-ok':a.status==='absent'?'bg-no':'bg-in'}">${a.status}</span></td>
+          <td><div class="ab">
+            <button class="ib" onclick="TCH_ATT.openEdit('${a.id}')" title="تعديل">✏️</button>
+            <button class="ib" onclick="TCH_ATT.del('${a.id}')" title="حذف">🗑️</button>
+          </div></td>
+        </tr>`).join('');
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    }
+  },
+
+  openAdd() {
+    this._id = null;
+    document.getElementById('tatt-form').reset();
+    document.getElementById('tatt-date').value = document.getElementById('tatt-date')?.value || new Date().toISOString().split('T')[0];
+    document.getElementById('tatt-form').querySelector('[name=session_date]').value = document.getElementById('tatt-date').value;
+    document.getElementById('tatt-modal').style.display = 'flex';
+  },
+
+  openEdit(id) {
+    const a = this._data.find(x => x.id === id);
+    if (!a) return;
+    this._id = id;
+    const f = document.getElementById('tatt-form');
+    f.reset();
+    f.querySelector('[name=teacher_id]').value = a.teacher_id;
+    f.querySelector('[name=session_date]').value = a.session_date;
+    f.querySelector('[name=check_in]').value = a.check_in || '';
+    f.querySelector('[name=check_out]').value = a.check_out || '';
+    f.querySelector('[name=status]').value = a.status || 'present';
+    f.querySelector('[name=notes]').value = a.notes || '';
+    document.getElementById('tatt-modal').style.display = 'flex';
+  },
+
+  async save(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    btn.disabled = true;
+    try {
+      const raw = getForm('tatt-form');
+      const d = {
+        teacher_id: raw.teacher_id,
+        session_date: raw.session_date,
+        check_in: raw.check_in || null,
+        check_out: raw.check_out || null,
+        status: raw.status || 'present',
+        notes: raw.notes || null,
+      };
+      const { error } = this._id
+        ? await DB.from('teacher_attendance').update(d).eq('id', this._id)
+        : await DB.from('teacher_attendance').upsert([d], { onConflict: 'teacher_id,session_date' });
+      if (error) throw error;
+      toast('✅ تم الحفظ', 'success');
+      this.closeModal();
+      await this.load();
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  },
+
+  async del(id) {
+    const ok = await CONF.ask('حذف هذا السجل؟');
+    if (!ok) return;
+    try {
+      await DB.from('teacher_attendance').delete().eq('id', id);
+      toast('✅ تم الحذف', 'warn');
+      await this.load();
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    }
+  },
+
+  closeModal() {
+    document.getElementById('tatt-modal').style.display = 'none';
+    this._id = null;
+  },
+};
+
+// ══ TEACHER PERFORMANCE ════════════════════════════════════════
+const TCH_PERF = {
+  async load() {
+    const tbody = document.getElementById('tperf-tbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="load">جارٍ التحميل...</td></tr>';
+    try {
+      const { data, error } = await DB.from('teacher_performance').select('*');
+      if (error) throw error;
+      tbody.innerHTML = !data.length ? '<tr><td colspan="6" class="empty">لا توجد بيانات</td></tr>'
+        : data.map(p => `<tr>
+          <td><strong>${p.teacher_name}</strong></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="min-width:40px;font-weight:700">${p.attendance_rate||0}%</span>
+              <div style="width:60px;height:6px;background:var(--b2);border-radius:3px">
+                <div style="width:${Math.min(p.attendance_rate||0,100)}%;height:100%;background:var(--P);border-radius:3px"></div>
+              </div>
+            </div>
+          </td>
+          <td>${(p.avg_work_hours||0).toFixed(1)} ساعة</td>
+          <td><span class="badge bg-in">${p.recorded_recitations||0}</span></td>
+          <td>${(p.excellence_rate||0).toFixed(0)}%</td>
+          <td>
+            <strong style="color:${p.overall_score>80?'var(--P)':p.overall_score>60?'var(--gold)':'var(--red)'}">${(p.overall_score||0).toFixed(1)}</strong>
+          </td>
+        </tr>`).join('');
+      toast('✅ تم التحديث', 'info');
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    }
+  },
+
+  init() {
+    this.load();
+  },
+};
+
+
 </script>
+
+<!-- ════════════════ المالية — الإيرادات ════════════════ -->
+<div id="sec-revenues" class="sec">
+  <div class="ph">
+    <h2>الإيرادات</h2>
+    <button class="btn btn-p" onclick="REV.openAdd()">+ إضافة إيراد</button>
+  </div>
+
+  <div class="tabs" id="rev-tabs">
+    <button class="tab on" onclick="REV.tab('all',this)">الكل</button>
+    <button class="tab" onclick="REV.tab('subscription',this)">اشتراكات</button>
+    <button class="tab" onclick="REV.tab('enrollment',this)">تأسيس</button>
+    <button class="tab" onclick="REV.tab('sales',this)">مبيعات</button>
+    <button class="tab" onclick="REV.tab('activities',this)">أنشطة ودعم</button>
+  </div>
+
+  <div class="ca">
+    <div class="tw">
+      <table class="tb">
+        <thead>
+          <tr>
+            <th style="width:50px">#</th>
+            <th>المصدر</th>
+            <th>الطالب</th>
+            <th>المبلغ</th>
+            <th>التاريخ</th>
+            <th>الطريقة</th>
+            <th style="width:100px">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="rev-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal إضافة/تعديل -->
+  <div id="rev-modal" class="mo" style="display:none" onclick="if(event.target===this)REV.closeModal()">
+    <div class="mb">
+      <div class="mh">
+        <h3 id="rev-modal-title">إضافة إيراد</h3>
+        <button class="mc3" onclick="REV.closeModal()">✕</button>
+      </div>
+      <div class="mbd">
+        <form id="rev-form" onsubmit="REV.save(event)" style="display:flex;flex-direction:column;gap:12px">
+          <div class="fg">
+            <label>المصدر <span class="req">*</span></label>
+            <select class="fi" name="source" required>
+              <option value="subscription">اشتراكات شهرية</option>
+              <option value="enrollment">رسوم تأسيس</option>
+              <option value="sales">مبيعات (كتب ومستلزمات)</option>
+              <option value="activities">أنشطة ودعم</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>الطالب (اختياري)</label>
+            <select class="fi" name="student_id" id="rev-stu-sel">
+              <option value="">— بدون طالب —</option>
+            </select>
+          </div>
+          <div class="fg2">
+            <div class="fg">
+              <label>المبلغ <span class="req">*</span></label>
+              <input class="fi" name="amount" type="number" step="0.01" required placeholder="0.00"/>
+            </div>
+            <div class="fg">
+              <label>التاريخ <span class="req">*</span></label>
+              <input class="fi" name="revenue_date" type="date" required/>
+            </div>
+          </div>
+          <div class="fg">
+            <label>طريقة الدفع</label>
+            <select class="fi" name="payment_method">
+              <option value="cash">نقدي</option>
+              <option value="card">بطاقة</option>
+              <option value="bank_transfer">تحويل بنكي</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>الوصف</label>
+            <input class="fi" name="description" type="text" placeholder="وصف مختصر..."/>
+          </div>
+          <div class="fg">
+            <label>ملاحظات</label>
+            <textarea class="fi" name="notes" rows="2"></textarea>
+          </div>
+          <div class="mf">
+            <button type="button" class="btn btn-g" onclick="REV.closeModal()">إلغاء</button>
+            <button type="submit" class="btn btn-p">حفظ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ المالية — المصروفات ════════════════ -->
+<div id="sec-expenses" class="sec">
+  <div class="ph">
+    <h2>المصروفات</h2>
+    <button class="btn btn-p" onclick="EXP.openAdd()">+ إضافة مصروف</button>
+  </div>
+
+  <div class="tabs" id="exp-tabs">
+    <button class="tab on" onclick="EXP.tab('all',this)">الكل</button>
+    <button class="tab" onclick="EXP.tab('salaries',this)">رواتب</button>
+    <button class="tab" onclick="EXP.tab('rent',this)">إيجار</button>
+    <button class="tab" onclick="EXP.tab('utilities',this)">فواتير</button>
+    <button class="tab" onclick="EXP.tab('supplies',this)">مستلزمات</button>
+    <button class="tab" onclick="EXP.tab('maintenance',this)">صيانة</button>
+    <button class="tab" onclick="EXP.tab('other',this)">أخرى</button>
+  </div>
+
+  <div class="ca">
+    <div class="tw">
+      <table class="tb">
+        <thead>
+          <tr>
+            <th style="width:50px">#</th>
+            <th>الفئة</th>
+            <th>الوصف</th>
+            <th>المبلغ</th>
+            <th>التاريخ</th>
+            <th>المستلم</th>
+            <th style="width:100px">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="exp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal إضافة/تعديل -->
+  <div id="exp-modal" class="mo" style="display:none" onclick="if(event.target===this)EXP.closeModal()">
+    <div class="mb">
+      <div class="mh">
+        <h3 id="exp-modal-title">إضافة مصروف</h3>
+        <button class="mc3" onclick="EXP.closeModal()">✕</button>
+      </div>
+      <div class="mbd">
+        <form id="exp-form" onsubmit="EXP.save(event)" style="display:flex;flex-direction:column;gap:12px">
+          <div class="fg">
+            <label>الفئة <span class="req">*</span></label>
+            <select class="fi" name="category" required>
+              <option value="salaries">رواتب المعلمين</option>
+              <option value="rent">إيجار الدار</option>
+              <option value="utilities">فواتير (كهرباء، مياه، إنترنت)</option>
+              <option value="supplies">مستلزمات تعليمية</option>
+              <option value="maintenance">صيانة</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>الوصف <span class="req">*</span></label>
+            <input class="fi" name="description" type="text" required placeholder="مثال: رواتب شهر مايو"/>
+          </div>
+          <div class="fg2">
+            <div class="fg">
+              <label>المبلغ <span class="req">*</span></label>
+              <input class="fi" name="amount" type="number" step="0.01" required placeholder="0.00"/>
+            </div>
+            <div class="fg">
+              <label>التاريخ <span class="req">*</span></label>
+              <input class="fi" name="expense_date" type="date" required/>
+            </div>
+          </div>
+          <div class="fg">
+            <label>المستلم</label>
+            <input class="fi" name="recipient" type="text" placeholder="اسم المستلم..."/>
+          </div>
+          <div class="fg">
+            <label>طريقة الدفع</label>
+            <select class="fi" name="payment_method">
+              <option value="cash">نقدي</option>
+              <option value="card">بطاقة</option>
+              <option value="bank_transfer">تحويل بنكي</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>ملاحظات</label>
+            <textarea class="fi" name="notes" rows="2"></textarea>
+          </div>
+          <div class="mf">
+            <button type="button" class="btn btn-g" onclick="EXP.closeModal()">إلغاء</button>
+            <button type="submit" class="btn btn-p">حفظ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ المالية — الملخص ════════════════ -->
+<div id="sec-finance-summary" class="sec">
+  <div class="ph">
+    <h2>ملخص المالية</h2>
+    <button class="btn btn-s" onclick="FIN_SUM.load()">🔄 تحديث</button>
+  </div>
+
+  <div class="ca">
+    <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+      <div class="sc" style="background:linear-gradient(135deg,#16a34a,#22c55e)">
+        <div class="sv" style="color:white;font-size:28px;font-weight:900" id="sum-rev-month">0</div>
+        <div class="sl" style="color:rgba(255,255,255,.8)">إيرادات الشهر</div>
+      </div>
+      <div class="sc" style="background:linear-gradient(135deg,#dc2626,#ef4444)">
+        <div class="sv" style="color:white;font-size:28px;font-weight:900" id="sum-exp-month">0</div>
+        <div class="sl" style="color:rgba(255,255,255,.8)">مصروفات الشهر</div>
+      </div>
+      <div class="sc" style="background:linear-gradient(135deg,#2563eb,#3b82f6)">
+        <div class="sv" style="color:white;font-size:28px;font-weight:900" id="sum-balance">0</div>
+        <div class="sl" style="color:rgba(255,255,255,.8)">الرصيد الكلي</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+      <div class="ca" style="padding:20px">
+        <h3 style="font-size:15px;margin-bottom:16px">الإيرادات السنوية</h3>
+        <div class="sv" style="font-size:32px;font-weight:900;color:var(--P)" id="sum-rev-year">0</div>
+      </div>
+      <div class="ca" style="padding:20px">
+        <h3 style="font-size:15px;margin-bottom:16px">المصروفات السنوية</h3>
+        <div class="sv" style="font-size:32px;font-weight:900;color:var(--red)" id="sum-exp-year">0</div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      ℹ️ الرصيد الكلي = إجمالي الإيرادات - إجمالي المصروفات (منذ بداية النظام)
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ TEACHER ATTENDANCE ════════════════ -->
+<div id="sec-teacher-attendance" class="sec">
+  <div class="ph">
+    <h2>حضور وانصراف المعلمين</h2>
+    <button class="btn btn-p" onclick="TCH_ATT.openAdd()">+ تسجيل حضور</button>
+  </div>
+
+  <div class="fb" style="gap:12px">
+    <div>
+      <label style="font-size:12px;color:var(--ts)">التاريخ</label>
+      <input class="fs" id="tatt-date" type="date" onchange="TCH_ATT.load()"/>
+    </div>
+    <div>
+      <label style="font-size:12px;color:var(--ts)">المعلم</label>
+      <select class="fs" id="tatt-teacher" onchange="TCH_ATT.load()">
+        <option value="">جميع المعلمين</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="ca">
+    <div class="tw">
+      <table class="tb">
+        <thead>
+          <tr>
+            <th>المعلم</th>
+            <th>التاريخ</th>
+            <th>الدخول</th>
+            <th>الخروج</th>
+            <th>ساعات العمل</th>
+            <th>الحالة</th>
+            <th style="width:100px">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="tatt-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="tatt-modal" class="mo" style="display:none" onclick="if(event.target===this)TCH_ATT.closeModal()">
+    <div class="mb">
+      <div class="mh">
+        <h3>تسجيل حضور معلم</h3>
+        <button class="mc3" onclick="TCH_ATT.closeModal()">✕</button>
+      </div>
+      <div class="mbd">
+        <form id="tatt-form" onsubmit="TCH_ATT.save(event)" style="display:flex;flex-direction:column;gap:12px">
+          <div class="fg">
+            <label>المعلم <span class="req">*</span></label>
+            <select class="fi" name="teacher_id" id="tatt-teacher-sel" required></select>
+          </div>
+          <div class="fg">
+            <label>التاريخ <span class="req">*</span></label>
+            <input class="fi" name="session_date" type="date" required/>
+          </div>
+          <div class="fg2">
+            <div class="fg">
+              <label>وقت الدخول</label>
+              <input class="fi" name="check_in" type="time"/>
+            </div>
+            <div class="fg">
+              <label>وقت الخروج</label>
+              <input class="fi" name="check_out" type="time"/>
+            </div>
+          </div>
+          <div class="fg">
+            <label>الحالة</label>
+            <select class="fi" name="status">
+              <option value="present">✅ حاضر</option>
+              <option value="absent">❌ غائب</option>
+              <option value="late">⏰ متأخر</option>
+              <option value="half_day">📋 نصف يوم</option>
+              <option value="sick_leave">🏥 إجازة مرضية</option>
+              <option value="vacation">✈️ إجازة</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>ملاحظات</label>
+            <textarea class="fi" name="notes" rows="2"></textarea>
+          </div>
+          <div class="mf">
+            <button type="button" class="btn btn-g" onclick="TCH_ATT.closeModal()">إلغاء</button>
+            <button type="submit" class="btn btn-p">حفظ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ TEACHER PERFORMANCE ════════════════ -->
+<div id="sec-teacher-performance" class="sec">
+  <div class="ph">
+    <h2>تقييم أداء المعلمين</h2>
+    <button class="btn btn-s" onclick="TCH_PERF.load()">🔄 تحديث</button>
+  </div>
+
+  <div class="ca">
+    <div class="tw">
+      <table class="tb">
+        <thead>
+          <tr>
+            <th>المعلم</th>
+            <th>معدل الحضور</th>
+            <th>ساعات العمل</th>
+            <th>التسميعات المسجلة</th>
+            <th>نسبة التميز</th>
+            <th>التقييم الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody id="tperf-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+
 </body>
 </html>
+
+
+// ══ REVENUES ═══════════════════════════════════════════════════
+const REV = {
+  _data: [], _id: null, _tab: 'all',
+
+  async load(force = false) {
+    const tbody = document.getElementById('rev-tbody');
+    tbody.innerHTML = Array(4).fill(`<tr>${Array(7).fill('<td><div class="skeleton" style="height:13px;border-radius:4px"></div></td>').join('')}</tr>`).join('');
+    try {
+      if (force) CACHE.invalidate('revenues');
+      const cacheKey = 'revenues_' + this._tab;
+      const data = await CACHE.fetch(cacheKey, async () => {
+        let q = DB.from('revenues').select('*,students(name)').order('revenue_date', {ascending:false}).limit(200);
+        if (this._tab !== 'all') q = q.eq('source', this._tab);
+        const { data, error } = await q;
+        if (error) throw error;
+        return data || [];
+      });
+      this._data = data;
+      const sourceLabels = {subscription:'اشتراك',enrollment:'تأسيس',sales:'مبيعات',activities:'أنشطة'};
+      tbody.innerHTML = !data.length ? '<tr><td colspan="7" class="empty">لا توجد إيرادات</td></tr>'
+        : data.map((r,i) => `<tr>
+          <td class="tn">${i+1}</td>
+          <td><span class="badge bg-ok">${sourceLabels[r.source]||r.source}</span></td>
+          <td>${r.students?.name||'—'}</td>
+          <td style="font-weight:700;color:var(--P)">${r.amount.toFixed(2)} ${r.currency}</td>
+          <td>${new Date(r.revenue_date).toLocaleDateString('ar-EG')}</td>
+          <td><span class="badge bg-in">${r.payment_method||'—'}</span></td>
+          <td><div class="ab">
+            ${canDo('edit','finance') ? `<button class="ib" onclick="REV.openEdit('${r.id}')" title="تعديل">✏️</button>` : ''}
+            ${canDo('delete','finance') ? `<button class="ib" onclick="REV.del('${r.id}')" title="حذف">🗑️</button>` : ''}
+          </div></td>
+        </tr>`).join('');
+    } catch(err) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty" style="color:var(--danger)">خطأ: ${err.message}</td></tr>`;
+    }
+  },
+
+  tab(t, btn) {
+    this._tab = t;
+    CACHE.invalidate('revenues_' + t);
+    document.querySelectorAll('#rev-tabs .tab').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    this.load(true);
+  },
+
+  openAdd() {
+    if (!canDo('edit','finance')) return;
+    this._id = null;
+    document.getElementById('rev-form').reset();
+    document.getElementById('rev-modal-title').textContent = 'إضافة إيراد';
+    document.getElementById('rev-modal').style.display = 'flex';
+    this._loadStudentSelect();
+  },
+
+  openEdit(id) {
+    if (!canDo('edit','finance')) return;
+    const r = this._data.find(x => x.id === id);
+    if (!r) return;
+    this._id = id;
+    document.getElementById('rev-modal-title').textContent = 'تعديل إيراد';
+    document.getElementById('rev-form').reset();
+    const f = document.getElementById('rev-form');
+    ['source','student_id','amount','revenue_date','payment_method','description','notes'].forEach(k => {
+      const el = f.querySelector(`[name=${k}]`);
+      if (el) el.value = r[k] || '';
+    });
+    document.getElementById('rev-modal').style.display = 'flex';
+  },
+
+  _loadStudentSelect() {
+    const sel = document.getElementById('rev-stu-sel');
+    DB.from('students').select('id,name').eq('is_active',true).order('name').then(({ data }) => {
+      sel.innerHTML = '<option value="">— بدون طالب —</option>' + 
+        (data||[]).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    });
+  },
+
+  async save(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    const origTxt = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'جارٍ الحفظ...';
+    try {
+      const raw = getForm('rev-form');
+      if (!raw.source || !raw.amount || !raw.revenue_date) {
+        toast('أدخل المصدر والمبلغ والتاريخ', 'error');
+        return;
+      }
+      const d = {
+        source: raw.source,
+        student_id: raw.student_id || null,
+        amount: parseFloat(raw.amount),
+        currency: 'ج.م.',
+        revenue_date: raw.revenue_date,
+        payment_method: raw.payment_method,
+        description: raw.description,
+        notes: raw.notes,
+        created_at: new Date().toISOString(),
+      };
+      const { error } = this._id 
+        ? await DB.from('revenues').update(d).eq('id', this._id)
+        : await DB.from('revenues').insert([d]);
+      if (error) throw error;
+      toast('✅ تم الحفظ', 'success');
+      CACHE.invalidate('revenues_' + this._tab);
+      this.closeModal();
+      await this.load(true);
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origTxt;
+    }
+  },
+
+  async del(id) {
+    const ok = await CONF.ask('حذف هذا الإيراد؟');
+    if (!ok) return;
+    try {
+      await DB.from('revenues').delete().eq('id', id);
+      toast('✅ تم الحذف', 'warn');
+      CACHE.invalidate('revenues_' + this._tab);
+      await this.load(true);
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    }
+  },
+
+  closeModal() {
+    document.getElementById('rev-modal').style.display = 'none';
+    this._id = null;
+  },
+};
+
+// ══ EXPENSES ════════════════════════════════════════════════════
+const EXP = {
+  _data: [], _id: null, _tab: 'all',
+
+  async load(force = false) {
+    const tbody = document.getElementById('exp-tbody');
+    tbody.innerHTML = Array(4).fill(`<tr>${Array(7).fill('<td><div class="skeleton" style="height:13px;border-radius:4px"></div></td>').join('')}</tr>`).join('');
+    try {
+      if (force) CACHE.invalidate('expenses');
+      const cacheKey = 'expenses_' + this._tab;
+      const data = await CACHE.fetch(cacheKey, async () => {
+        let q = DB.from('expenses').select('*').order('expense_date', {ascending:false}).limit(200);
+        if (this._tab !== 'all') q = q.eq('category', this._tab);
+        const { data, error } = await q;
+        if (error) throw error;
+        return data || [];
+      });
+      this._data = data;
+      const catLabels = {salaries:'رواتب',rent:'إيجار',utilities:'فواتير',supplies:'مستلزمات',maintenance:'صيانة',other:'أخرى'};
+      tbody.innerHTML = !data.length ? '<tr><td colspan="7" class="empty">لا توجد مصروفات</td></tr>'
+        : data.map((e,i) => `<tr>
+          <td class="tn">${i+1}</td>
+          <td><span class="badge bg-wa">${catLabels[e.category]||e.category}</span></td>
+          <td>${e.description}</td>
+          <td style="font-weight:700;color:var(--red)">${e.amount.toFixed(2)} ${e.currency}</td>
+          <td>${new Date(e.expense_date).toLocaleDateString('ar-EG')}</td>
+          <td>${e.recipient||'—'}</td>
+          <td><div class="ab">
+            ${canDo('edit','finance') ? `<button class="ib" onclick="EXP.openEdit('${e.id}')" title="تعديل">✏️</button>` : ''}
+            ${canDo('delete','finance') ? `<button class="ib" onclick="EXP.del('${e.id}')" title="حذف">🗑️</button>` : ''}
+          </div></td>
+        </tr>`).join('');
+    } catch(err) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty" style="color:var(--danger)">خطأ: ${err.message}</td></tr>`;
+    }
+  },
+
+  tab(t, btn) {
+    this._tab = t;
+    CACHE.invalidate('expenses_' + t);
+    document.querySelectorAll('#exp-tabs .tab').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    this.load(true);
+  },
+
+  openAdd() {
+    if (!canDo('edit','finance')) return;
+    this._id = null;
+    document.getElementById('exp-form').reset();
+    document.getElementById('exp-modal-title').textContent = 'إضافة مصروف';
+    document.getElementById('exp-modal').style.display = 'flex';
+  },
+
+  openEdit(id) {
+    if (!canDo('edit','finance')) return;
+    const e = this._data.find(x => x.id === id);
+    if (!e) return;
+    this._id = id;
+    document.getElementById('exp-modal-title').textContent = 'تعديل مصروف';
+    document.getElementById('exp-form').reset();
+    const f = document.getElementById('exp-form');
+    ['category','description','amount','expense_date','payment_method','recipient','notes'].forEach(k => {
+      const el = f.querySelector(`[name=${k}]`);
+      if (el) el.value = e[k] || '';
+    });
+    document.getElementById('exp-modal').style.display = 'flex';
+  },
+
+  async save(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    const origTxt = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'جارٍ الحفظ...';
+    try {
+      const raw = getForm('exp-form');
+      if (!raw.category || !raw.description || !raw.amount || !raw.expense_date) {
+        toast('أدخل الفئة والوصف والمبلغ والتاريخ', 'error');
+        return;
+      }
+      const d = {
+        category: raw.category,
+        description: raw.description,
+        amount: parseFloat(raw.amount),
+        currency: 'ج.م.',
+        expense_date: raw.expense_date,
+        payment_method: raw.payment_method,
+        recipient: raw.recipient || null,
+        notes: raw.notes,
+        created_at: new Date().toISOString(),
+      };
+      const { error } = this._id 
+        ? await DB.from('expenses').update(d).eq('id', this._id)
+        : await DB.from('expenses').insert([d]);
+      if (error) throw error;
+      toast('✅ تم الحفظ', 'success');
+      CACHE.invalidate('expenses_' + this._tab);
+      this.closeModal();
+      await this.load(true);
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origTxt;
+    }
+  },
+
+  async del(id) {
+    const ok = await CONF.ask('حذف هذا المصروف؟');
+    if (!ok) return;
+    try {
+      await DB.from('expenses').delete().eq('id', id);
+      toast('✅ تم الحذف', 'warn');
+      CACHE.invalidate('expenses_' + this._tab);
+      await this.load(true);
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    }
+  },
+
+  closeModal() {
+    document.getElementById('exp-modal').style.display = 'none';
+    this._id = null;
+  },
+};
+
+// ══ FINANCIAL SUMMARY ═══════════════════════════════════════════
+const FIN_SUM = {
+  async load() {
+    try {
+      const { data: summary } = await DB.rpc('financial_summary');
+      if (summary && summary[0]) {
+        const s = summary[0];
+        document.getElementById('sum-rev-month').textContent = (s.monthly_revenue || 0).toFixed(0) + ' ج.م.';
+        document.getElementById('sum-exp-month').textContent = (s.monthly_expenses || 0).toFixed(0) + ' ج.م.';
+        document.getElementById('sum-rev-year').textContent = (s.yearly_revenue || 0).toFixed(0) + ' ج.م.';
+        document.getElementById('sum-exp-year').textContent = (s.yearly_expenses || 0).toFixed(0) + ' ج.م.';
+        const balance = (s.total_balance || 0).toFixed(0);
+        document.getElementById('sum-balance').textContent = balance + ' ج.م.';
+        document.getElementById('sum-balance').style.color = balance < 0 ? 'var(--red)' : 'var(--P)';
+      }
+      toast('✅ تم التحديث', 'info');
+    } catch(err) {
+      toast('خطأ في جلب الملخص: ' + err.message, 'error');
+    }
+  },
+
+  init() {
+    this.load();
+  },
+};
+
