@@ -2177,7 +2177,9 @@ thead th {
             <div class="fg"><label>النوع</label>
               <select class="fi" name="type">
                 <option value="new_memorization">حفظ جديد</option>
-                <option value="review">مراجعة</option>
+                <option value="review_old">مراجعة قديمة</option>
+                <option value="review_new">مراجعة جديدة</option>
+                <option value="test">اختبار</option>
               </select></div>
             <div class="fg"><label>التاريخ</label>
               <input class="fi" name="session_date" type="date" required/></div>
@@ -4987,7 +4989,7 @@ const REC = {
   _data: [], _id: null,
   _ratingLabels: {excellent:'ممتاز',good:'جيد جداً',acceptable:'جيد',weak:'مقبول'},
   _ratingBadge: {excellent:'bg-ok',good:'bg-ok',acceptable:'bg-in',weak:'bg-wa'},
-  _typeLabels: {new_memorization:'حفظ جديد',review:'مراجعة'},
+  _typeLabels: {new_memorization:'حفظ جديد',review_old:'مراجعة قديمة',review_new:'مراجعة جديدة',test:'اختبار'},
 
   async init() {
     const { data } = await DB.from('circles').select('id,name').eq('is_active',true).order('name');
