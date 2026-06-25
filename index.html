@@ -1800,7 +1800,7 @@ thead th {
     <div class="lw-verse">﴿ إِنَّا نَحْنُ نَزَّلْنَا الذِّكْرَ وَإِنَّا لَهُ لَحَافِظُونَ ﴾</div>
     <div id="l-msg" class="l-msg"></div>
     <div class="lf"><label>البريد الإلكتروني</label>
-      <input type="email" id="l-email" placeholder="admin@dar.com" autocomplete="email"/></div>
+      <input type="text" id="l-email" placeholder="admin@dar.com" autocomplete="email" inputmode="email" value=""/></div>
     <div class="lf"><label>كلمة المرور</label>
       <div class="pw">
         <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"/>
@@ -1809,6 +1809,7 @@ thead th {
     </div>
     <button class="l-btn" id="l-btn" onclick="APP.login()">تسجيل الدخول</button>
     <button class="l-forgot" onclick="APP.forgot()">نسيت كلمة المرور؟</button>
+    <button class="l-forgot" onclick="APP.diagnose()" style="margin-top:8px;color:#94a3b8;font-size:11px">🔍 تشخيص المشكلة</button>
     <div class="l-ver">دار الإمام مالك v2.0</div>
   </div>
 </div>
@@ -3032,6 +3033,40 @@ const APP = {
 
 
 
+
+
+  async diagnose() {
+    const msgs = [];
+    this.loginMsg('🔍 جارٍ التشخيص...', 'warn');
+    await new Promise(r => setTimeout(r, 100));
+
+    if (!DB) {
+      this.loginMsg('❌ Supabase غير متصل — تحقق من SUPABASE_URL في الملف', 'error');
+      return;
+    }
+
+    try {
+      const { data, error } = await DB.from('profiles').select('id').limit(1);
+      if (error) {
+        if (error.code === '42P01' || error.message.includes('relation')) {
+          this.loginMsg('❌ جدول profiles غير موجود — شغّل 00_SETUP_PROFILES.sql في Supabase SQL Editor', 'error');
+        } else if (error.code === '42501' || error.message.includes('permission')) {
+          this.loginMsg('❌ مشكلة صلاحيات — شغّل 01_FIX_RLS_POLICIES.sql في Supabase', 'error');
+        } else {
+          this.loginMsg('❌ خطأ: ' + error.message + ' | code: ' + error.code, 'error');
+        }
+        return;
+      }
+      const count = data?.length || 0;
+      this.loginMsg('✅ الاتصال سليم | profiles: ' + count + ' سجل | جرّب تسجيل الدخول مجدداً', 'warn');
+    } catch(e) {
+      if (e.message.includes('fetch') || e.message.includes('Network') || e.message.includes('Failed')) {
+        this.loginMsg('❌ خطأ شبكة (CORS) — اذهب إلى Supabase > Settings > API > CORS وأضف نطاقك', 'error');
+      } else {
+        this.loginMsg('❌ ' + e.message, 'error');
+      }
+    }
+  },
   // ── Bootstrap ─────────────────────────────────────────────
   async boot() {
     const saved = localStorage.getItem('dar-theme') || 'dark';
@@ -3042,9 +3077,12 @@ const APP = {
       new Date().toLocaleDateString('ar-EG', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
 
     document.addEventListener('keydown', e => {
-      if (e.key==='Enter') {
+      if (e.key === 'Enter') {
         const ls = document.getElementById('login-screen');
-        if (ls && ls.style.display !== 'none') APP.login();
+        if (ls && ls.style.display !== 'none' && ls.style.display !== '') {
+          e.preventDefault();
+          APP.login();
+        }
       }
     });
 
@@ -3081,9 +3119,15 @@ const APP = {
 
   async login() {
     if (!DB) { this.loginMsg('⚠️ أضف مفاتيح Supabase أولاً', 'warn'); return; }
-    const email = document.getElementById('l-email').value.trim();
-    const pass  = document.getElementById('l-pass').value;
-    if (!email || !pass) { this.loginMsg('أدخل البريد وكلمة المرور'); return; }
+    const emailEl = document.getElementById('l-email');
+    const passEl  = document.getElementById('l-pass');
+    const email = (emailEl?.value || '').trim();
+    const pass  = (passEl?.value || '').trim();
+    if (!email || !pass) {
+      this.loginMsg('أدخل البريد الإلكتروني وكلمة المرور');
+      if (emailEl) emailEl.focus();
+      return;
+    }
 
     const btn = document.getElementById('l-btn');
     btn.disabled = true;
@@ -3098,11 +3142,14 @@ const APP = {
       const map = {
         'Invalid login credentials': 'البريد أو كلمة المرور غير صحيحة',
         'Email not confirmed': 'يرجى تأكيد البريد الإلكتروني',
-        'Failed to fetch': 'تعذّر الاتصال — تحقق من الإنترنت',
-        'Invalid path': 'خطأ في SUPABASE_URL',
+        'Failed to fetch': 'تعذّر الاتصال — تحقق من الإنترنت أو CORS في Supabase',
+        'NetworkError': 'خطأ شبكة — تحقق من إعدادات CORS في Supabase > Settings > API',
+        'Invalid path': 'خطأ في SUPABASE_URL — تحقق من الرابط في الملف',
+        'fetch': 'تعذّر الاتصال بـ Supabase — تحقق من CORS',
       };
       let msg = e.message || String(e);
-      for (const [k,v] of Object.entries(map)) if (msg.includes(k)) { msg=v; break; }
+      for (const [k,v] of Object.entries(map)) if (msg.toLowerCase().includes(k.toLowerCase())) { msg=v; break; }
+      console.error('Login error:', e);
       this.loginMsg(msg);
     } finally {
       btn.disabled = false;
@@ -3125,33 +3172,39 @@ const APP = {
 
   // ── After login ────────────────────────────────────────────
   async afterLogin(user) {
-    // Load profile — with detailed error reporting
-    const { data: prof, error: profErr } = await DB.from('profiles')
+    // Load profile — auto-create if missing
+    let prof = null;
+
+    const { data: p1, error: e1 } = await DB.from('profiles')
       .select('*').eq('id', user.id).single();
 
-    if (profErr || !prof) {
-      console.error('Profile load error:', profErr);
-      // Try to create profile automatically if it doesn't exist
-      if (profErr?.code === 'PGRST116') { // row not found
-        const { error: insErr } = await DB.from('profiles').insert({
-          id: user.id,
-          full_name: user.email.split('@')[0],
-          role: 'admin_general',
-          is_active: true
-        });
-        if (insErr) {
-          await DB.auth.signOut();
-          this.showLogin('خطأ في تحميل الملف الشخصي: ' + (profErr?.message || 'غير معروف') + ' — تأكد من تشغيل fix_user_creation.sql');
-          return;
-        }
-        // Retry
-        const { data: prof2 } = await DB.from('profiles').select('*').eq('id', user.id).single();
-        if (!prof2) { await DB.auth.signOut(); this.showLogin('فشل إنشاء الملف الشخصي — شغّل fix_user_creation.sql'); return; }
-        return this.afterLogin(user);
+    if (e1 || !p1) {
+      // Auto-create profile (handles new users and missing table rows)
+      const newProf = {
+        id: user.id,
+        full_name: user.user_metadata?.full_name || user.email.split('@')[0],
+        role: 'admin_general',
+        is_active: true,
+      };
+      const { error: insErr } = await DB.from('profiles').upsert([newProf]);
+      if (insErr) {
+        // Table may not exist yet — show helpful message
+        const msg = insErr.message.includes('relation')
+          ? 'جدول profiles غير موجود — شغّل 00_SETUP_PROFILES.sql في Supabase'
+          : 'خطأ في الملف الشخصي: ' + insErr.message;
+        await DB.auth.signOut();
+        this.showLogin(msg);
+        return;
       }
-      await DB.auth.signOut();
-      this.showLogin('خطأ في الصلاحيات: ' + (profErr?.message || 'تأكد من تشغيل fix_user_creation.sql'));
-      return;
+      const { data: p2 } = await DB.from('profiles').select('*').eq('id', user.id).single();
+      if (!p2) {
+        await DB.auth.signOut();
+        this.showLogin('فشل إنشاء الملف الشخصي — شغّل 00_SETUP_PROFILES.sql');
+        return;
+      }
+      prof = p2;
+    } else {
+      prof = p1;
     }
 
     if (!prof.is_active) {
@@ -5793,6 +5846,295 @@ const TCH_PERF = {
 };
 
 
+
+
+// ══ REVENUES ═══════════════════════════════════════════════════
+const REV = {
+  _data: [], _id: null, _tab: 'all',
+
+  async load(force = false) {
+    const tbody = document.getElementById('rev-tbody');
+    tbody.innerHTML = Array(4).fill(`<tr>${Array(7).fill('<td><div class="skeleton" style="height:13px;border-radius:4px"></div></td>').join('')}</tr>`).join('');
+    try {
+      if (force) CACHE.invalidate('revenues');
+      const cacheKey = 'revenues_' + this._tab;
+      const data = await CACHE.fetch(cacheKey, async () => {
+        let q = DB.from('revenues').select('*,students(name)').order('revenue_date', {ascending:false}).limit(200);
+        if (this._tab !== 'all') q = q.eq('source', this._tab);
+        const { data, error } = await q;
+        if (error) throw error;
+        return data || [];
+      });
+      this._data = data;
+      const sourceLabels = {subscription:'اشتراك',enrollment:'تأسيس',sales:'مبيعات',activities:'أنشطة'};
+      tbody.innerHTML = !data.length ? '<tr><td colspan="7" class="empty">لا توجد إيرادات</td></tr>'
+        : data.map((r,i) => `<tr>
+          <td class="tn">${i+1}</td>
+          <td><span class="badge bg-ok">${sourceLabels[r.source]||r.source}</span></td>
+          <td>${r.students?.name||'—'}</td>
+          <td style="font-weight:700;color:var(--P)">${r.amount.toFixed(2)} ${r.currency}</td>
+          <td>${new Date(r.revenue_date).toLocaleDateString('ar-EG')}</td>
+          <td><span class="badge bg-in">${r.payment_method||'—'}</span></td>
+          <td><div class="ab">
+            ${canDo('edit','finance') ? `<button class="ib" onclick="REV.openEdit('${r.id}')" title="تعديل">✏️</button>` : ''}
+            ${canDo('delete','finance') ? `<button class="ib" onclick="REV.del('${r.id}')" title="حذف">🗑️</button>` : ''}
+          </div></td>
+        </tr>`).join('');
+    } catch(err) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty" style="color:var(--danger)">خطأ: ${err.message}</td></tr>`;
+    }
+  },
+
+  tab(t, btn) {
+    this._tab = t;
+    CACHE.invalidate('revenues_' + t);
+    document.querySelectorAll('#rev-tabs .tab').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    this.load(true);
+  },
+
+  openAdd() {
+    if (!canDo('edit','finance')) return;
+    this._id = null;
+    document.getElementById('rev-form').reset();
+    document.getElementById('rev-modal-title').textContent = 'إضافة إيراد';
+    document.getElementById('rev-modal').style.display = 'flex';
+    this._loadStudentSelect();
+  },
+
+  openEdit(id) {
+    if (!canDo('edit','finance')) return;
+    const r = this._data.find(x => x.id === id);
+    if (!r) return;
+    this._id = id;
+    document.getElementById('rev-modal-title').textContent = 'تعديل إيراد';
+    document.getElementById('rev-form').reset();
+    const f = document.getElementById('rev-form');
+    ['source','student_id','amount','revenue_date','payment_method','description','notes'].forEach(k => {
+      const el = f.querySelector(`[name=${k}]`);
+      if (el) el.value = r[k] || '';
+    });
+    document.getElementById('rev-modal').style.display = 'flex';
+  },
+
+  _loadStudentSelect() {
+    const sel = document.getElementById('rev-stu-sel');
+    DB.from('students').select('id,name').eq('is_active',true).order('name').then(({ data }) => {
+      sel.innerHTML = '<option value="">— بدون طالب —</option>' + 
+        (data||[]).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    });
+  },
+
+  async save(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    const origTxt = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'جارٍ الحفظ...';
+    try {
+      const raw = getForm('rev-form');
+      if (!raw.source || !raw.amount || !raw.revenue_date) {
+        toast('أدخل المصدر والمبلغ والتاريخ', 'error');
+        return;
+      }
+      const d = {
+        source: raw.source,
+        student_id: raw.student_id || null,
+        amount: parseFloat(raw.amount),
+        currency: 'ج.م.',
+        revenue_date: raw.revenue_date,
+        payment_method: raw.payment_method,
+        description: raw.description,
+        notes: raw.notes,
+        created_at: new Date().toISOString(),
+      };
+      const { error } = this._id 
+        ? await DB.from('revenues').update(d).eq('id', this._id)
+        : await DB.from('revenues').insert([d]);
+      if (error) throw error;
+      toast('✅ تم الحفظ', 'success');
+      CACHE.invalidate('revenues_' + this._tab);
+      this.closeModal();
+      await this.load(true);
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origTxt;
+    }
+  },
+
+  async del(id) {
+    const ok = await CONF.ask('حذف هذا الإيراد؟');
+    if (!ok) return;
+    try {
+      await DB.from('revenues').delete().eq('id', id);
+      toast('✅ تم الحذف', 'warn');
+      CACHE.invalidate('revenues_' + this._tab);
+      await this.load(true);
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    }
+  },
+
+  closeModal() {
+    document.getElementById('rev-modal').style.display = 'none';
+    this._id = null;
+  },
+};
+
+// ══ EXPENSES ════════════════════════════════════════════════════
+const EXP = {
+  _data: [], _id: null, _tab: 'all',
+
+  async load(force = false) {
+    const tbody = document.getElementById('exp-tbody');
+    tbody.innerHTML = Array(4).fill(`<tr>${Array(7).fill('<td><div class="skeleton" style="height:13px;border-radius:4px"></div></td>').join('')}</tr>`).join('');
+    try {
+      if (force) CACHE.invalidate('expenses');
+      const cacheKey = 'expenses_' + this._tab;
+      const data = await CACHE.fetch(cacheKey, async () => {
+        let q = DB.from('expenses').select('*').order('expense_date', {ascending:false}).limit(200);
+        if (this._tab !== 'all') q = q.eq('category', this._tab);
+        const { data, error } = await q;
+        if (error) throw error;
+        return data || [];
+      });
+      this._data = data;
+      const catLabels = {salaries:'رواتب',rent:'إيجار',utilities:'فواتير',supplies:'مستلزمات',maintenance:'صيانة',other:'أخرى'};
+      tbody.innerHTML = !data.length ? '<tr><td colspan="7" class="empty">لا توجد مصروفات</td></tr>'
+        : data.map((e,i) => `<tr>
+          <td class="tn">${i+1}</td>
+          <td><span class="badge bg-wa">${catLabels[e.category]||e.category}</span></td>
+          <td>${e.description}</td>
+          <td style="font-weight:700;color:var(--red)">${e.amount.toFixed(2)} ${e.currency}</td>
+          <td>${new Date(e.expense_date).toLocaleDateString('ar-EG')}</td>
+          <td>${e.recipient||'—'}</td>
+          <td><div class="ab">
+            ${canDo('edit','finance') ? `<button class="ib" onclick="EXP.openEdit('${e.id}')" title="تعديل">✏️</button>` : ''}
+            ${canDo('delete','finance') ? `<button class="ib" onclick="EXP.del('${e.id}')" title="حذف">🗑️</button>` : ''}
+          </div></td>
+        </tr>`).join('');
+    } catch(err) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty" style="color:var(--danger)">خطأ: ${err.message}</td></tr>`;
+    }
+  },
+
+  tab(t, btn) {
+    this._tab = t;
+    CACHE.invalidate('expenses_' + t);
+    document.querySelectorAll('#exp-tabs .tab').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    this.load(true);
+  },
+
+  openAdd() {
+    if (!canDo('edit','finance')) return;
+    this._id = null;
+    document.getElementById('exp-form').reset();
+    document.getElementById('exp-modal-title').textContent = 'إضافة مصروف';
+    document.getElementById('exp-modal').style.display = 'flex';
+  },
+
+  openEdit(id) {
+    if (!canDo('edit','finance')) return;
+    const e = this._data.find(x => x.id === id);
+    if (!e) return;
+    this._id = id;
+    document.getElementById('exp-modal-title').textContent = 'تعديل مصروف';
+    document.getElementById('exp-form').reset();
+    const f = document.getElementById('exp-form');
+    ['category','description','amount','expense_date','payment_method','recipient','notes'].forEach(k => {
+      const el = f.querySelector(`[name=${k}]`);
+      if (el) el.value = e[k] || '';
+    });
+    document.getElementById('exp-modal').style.display = 'flex';
+  },
+
+  async save(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    const origTxt = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'جارٍ الحفظ...';
+    try {
+      const raw = getForm('exp-form');
+      if (!raw.category || !raw.description || !raw.amount || !raw.expense_date) {
+        toast('أدخل الفئة والوصف والمبلغ والتاريخ', 'error');
+        return;
+      }
+      const d = {
+        category: raw.category,
+        description: raw.description,
+        amount: parseFloat(raw.amount),
+        currency: 'ج.م.',
+        expense_date: raw.expense_date,
+        payment_method: raw.payment_method,
+        recipient: raw.recipient || null,
+        notes: raw.notes,
+        created_at: new Date().toISOString(),
+      };
+      const { error } = this._id 
+        ? await DB.from('expenses').update(d).eq('id', this._id)
+        : await DB.from('expenses').insert([d]);
+      if (error) throw error;
+      toast('✅ تم الحفظ', 'success');
+      CACHE.invalidate('expenses_' + this._tab);
+      this.closeModal();
+      await this.load(true);
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origTxt;
+    }
+  },
+
+  async del(id) {
+    const ok = await CONF.ask('حذف هذا المصروف؟');
+    if (!ok) return;
+    try {
+      await DB.from('expenses').delete().eq('id', id);
+      toast('✅ تم الحذف', 'warn');
+      CACHE.invalidate('expenses_' + this._tab);
+      await this.load(true);
+    } catch(err) {
+      toast('خطأ: ' + err.message, 'error');
+    }
+  },
+
+  closeModal() {
+    document.getElementById('exp-modal').style.display = 'none';
+    this._id = null;
+  },
+};
+
+// ══ FINANCIAL SUMMARY ═══════════════════════════════════════════
+const FIN_SUM = {
+  async load() {
+    try {
+      const { data: summary } = await DB.rpc('financial_summary');
+      if (summary && summary[0]) {
+        const s = summary[0];
+        document.getElementById('sum-rev-month').textContent = (s.monthly_revenue || 0).toFixed(0) + ' ج.م.';
+        document.getElementById('sum-exp-month').textContent = (s.monthly_expenses || 0).toFixed(0) + ' ج.م.';
+        document.getElementById('sum-rev-year').textContent = (s.yearly_revenue || 0).toFixed(0) + ' ج.م.';
+        document.getElementById('sum-exp-year').textContent = (s.yearly_expenses || 0).toFixed(0) + ' ج.م.';
+        const balance = (s.total_balance || 0).toFixed(0);
+        document.getElementById('sum-balance').textContent = balance + ' ج.م.';
+        document.getElementById('sum-balance').style.color = balance < 0 ? 'var(--red)' : 'var(--P)';
+      }
+      toast('✅ تم التحديث', 'info');
+    } catch(err) {
+      toast('خطأ في جلب الملخص: ' + err.message, 'error');
+    }
+  },
+
+  init() {
+    this.load();
+  },
+};
+
 </script>
 
 <!-- ════════════════ المالية — الإيرادات ════════════════ -->
@@ -6148,292 +6490,3 @@ const TCH_PERF = {
 
 </body>
 </html>
-
-
-// ══ REVENUES ═══════════════════════════════════════════════════
-const REV = {
-  _data: [], _id: null, _tab: 'all',
-
-  async load(force = false) {
-    const tbody = document.getElementById('rev-tbody');
-    tbody.innerHTML = Array(4).fill(`<tr>${Array(7).fill('<td><div class="skeleton" style="height:13px;border-radius:4px"></div></td>').join('')}</tr>`).join('');
-    try {
-      if (force) CACHE.invalidate('revenues');
-      const cacheKey = 'revenues_' + this._tab;
-      const data = await CACHE.fetch(cacheKey, async () => {
-        let q = DB.from('revenues').select('*,students(name)').order('revenue_date', {ascending:false}).limit(200);
-        if (this._tab !== 'all') q = q.eq('source', this._tab);
-        const { data, error } = await q;
-        if (error) throw error;
-        return data || [];
-      });
-      this._data = data;
-      const sourceLabels = {subscription:'اشتراك',enrollment:'تأسيس',sales:'مبيعات',activities:'أنشطة'};
-      tbody.innerHTML = !data.length ? '<tr><td colspan="7" class="empty">لا توجد إيرادات</td></tr>'
-        : data.map((r,i) => `<tr>
-          <td class="tn">${i+1}</td>
-          <td><span class="badge bg-ok">${sourceLabels[r.source]||r.source}</span></td>
-          <td>${r.students?.name||'—'}</td>
-          <td style="font-weight:700;color:var(--P)">${r.amount.toFixed(2)} ${r.currency}</td>
-          <td>${new Date(r.revenue_date).toLocaleDateString('ar-EG')}</td>
-          <td><span class="badge bg-in">${r.payment_method||'—'}</span></td>
-          <td><div class="ab">
-            ${canDo('edit','finance') ? `<button class="ib" onclick="REV.openEdit('${r.id}')" title="تعديل">✏️</button>` : ''}
-            ${canDo('delete','finance') ? `<button class="ib" onclick="REV.del('${r.id}')" title="حذف">🗑️</button>` : ''}
-          </div></td>
-        </tr>`).join('');
-    } catch(err) {
-      tbody.innerHTML = `<tr><td colspan="7" class="empty" style="color:var(--danger)">خطأ: ${err.message}</td></tr>`;
-    }
-  },
-
-  tab(t, btn) {
-    this._tab = t;
-    CACHE.invalidate('revenues_' + t);
-    document.querySelectorAll('#rev-tabs .tab').forEach(b => b.classList.remove('on'));
-    btn.classList.add('on');
-    this.load(true);
-  },
-
-  openAdd() {
-    if (!canDo('edit','finance')) return;
-    this._id = null;
-    document.getElementById('rev-form').reset();
-    document.getElementById('rev-modal-title').textContent = 'إضافة إيراد';
-    document.getElementById('rev-modal').style.display = 'flex';
-    this._loadStudentSelect();
-  },
-
-  openEdit(id) {
-    if (!canDo('edit','finance')) return;
-    const r = this._data.find(x => x.id === id);
-    if (!r) return;
-    this._id = id;
-    document.getElementById('rev-modal-title').textContent = 'تعديل إيراد';
-    document.getElementById('rev-form').reset();
-    const f = document.getElementById('rev-form');
-    ['source','student_id','amount','revenue_date','payment_method','description','notes'].forEach(k => {
-      const el = f.querySelector(`[name=${k}]`);
-      if (el) el.value = r[k] || '';
-    });
-    document.getElementById('rev-modal').style.display = 'flex';
-  },
-
-  _loadStudentSelect() {
-    const sel = document.getElementById('rev-stu-sel');
-    DB.from('students').select('id,name').eq('is_active',true).order('name').then(({ data }) => {
-      sel.innerHTML = '<option value="">— بدون طالب —</option>' + 
-        (data||[]).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-    });
-  },
-
-  async save(e) {
-    e.preventDefault();
-    const btn = e.target.querySelector('button[type=submit]');
-    const origTxt = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'جارٍ الحفظ...';
-    try {
-      const raw = getForm('rev-form');
-      if (!raw.source || !raw.amount || !raw.revenue_date) {
-        toast('أدخل المصدر والمبلغ والتاريخ', 'error');
-        return;
-      }
-      const d = {
-        source: raw.source,
-        student_id: raw.student_id || null,
-        amount: parseFloat(raw.amount),
-        currency: 'ج.م.',
-        revenue_date: raw.revenue_date,
-        payment_method: raw.payment_method,
-        description: raw.description,
-        notes: raw.notes,
-        created_at: new Date().toISOString(),
-      };
-      const { error } = this._id 
-        ? await DB.from('revenues').update(d).eq('id', this._id)
-        : await DB.from('revenues').insert([d]);
-      if (error) throw error;
-      toast('✅ تم الحفظ', 'success');
-      CACHE.invalidate('revenues_' + this._tab);
-      this.closeModal();
-      await this.load(true);
-    } catch(err) {
-      toast('خطأ: ' + err.message, 'error');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = origTxt;
-    }
-  },
-
-  async del(id) {
-    const ok = await CONF.ask('حذف هذا الإيراد؟');
-    if (!ok) return;
-    try {
-      await DB.from('revenues').delete().eq('id', id);
-      toast('✅ تم الحذف', 'warn');
-      CACHE.invalidate('revenues_' + this._tab);
-      await this.load(true);
-    } catch(err) {
-      toast('خطأ: ' + err.message, 'error');
-    }
-  },
-
-  closeModal() {
-    document.getElementById('rev-modal').style.display = 'none';
-    this._id = null;
-  },
-};
-
-// ══ EXPENSES ════════════════════════════════════════════════════
-const EXP = {
-  _data: [], _id: null, _tab: 'all',
-
-  async load(force = false) {
-    const tbody = document.getElementById('exp-tbody');
-    tbody.innerHTML = Array(4).fill(`<tr>${Array(7).fill('<td><div class="skeleton" style="height:13px;border-radius:4px"></div></td>').join('')}</tr>`).join('');
-    try {
-      if (force) CACHE.invalidate('expenses');
-      const cacheKey = 'expenses_' + this._tab;
-      const data = await CACHE.fetch(cacheKey, async () => {
-        let q = DB.from('expenses').select('*').order('expense_date', {ascending:false}).limit(200);
-        if (this._tab !== 'all') q = q.eq('category', this._tab);
-        const { data, error } = await q;
-        if (error) throw error;
-        return data || [];
-      });
-      this._data = data;
-      const catLabels = {salaries:'رواتب',rent:'إيجار',utilities:'فواتير',supplies:'مستلزمات',maintenance:'صيانة',other:'أخرى'};
-      tbody.innerHTML = !data.length ? '<tr><td colspan="7" class="empty">لا توجد مصروفات</td></tr>'
-        : data.map((e,i) => `<tr>
-          <td class="tn">${i+1}</td>
-          <td><span class="badge bg-wa">${catLabels[e.category]||e.category}</span></td>
-          <td>${e.description}</td>
-          <td style="font-weight:700;color:var(--red)">${e.amount.toFixed(2)} ${e.currency}</td>
-          <td>${new Date(e.expense_date).toLocaleDateString('ar-EG')}</td>
-          <td>${e.recipient||'—'}</td>
-          <td><div class="ab">
-            ${canDo('edit','finance') ? `<button class="ib" onclick="EXP.openEdit('${e.id}')" title="تعديل">✏️</button>` : ''}
-            ${canDo('delete','finance') ? `<button class="ib" onclick="EXP.del('${e.id}')" title="حذف">🗑️</button>` : ''}
-          </div></td>
-        </tr>`).join('');
-    } catch(err) {
-      tbody.innerHTML = `<tr><td colspan="7" class="empty" style="color:var(--danger)">خطأ: ${err.message}</td></tr>`;
-    }
-  },
-
-  tab(t, btn) {
-    this._tab = t;
-    CACHE.invalidate('expenses_' + t);
-    document.querySelectorAll('#exp-tabs .tab').forEach(b => b.classList.remove('on'));
-    btn.classList.add('on');
-    this.load(true);
-  },
-
-  openAdd() {
-    if (!canDo('edit','finance')) return;
-    this._id = null;
-    document.getElementById('exp-form').reset();
-    document.getElementById('exp-modal-title').textContent = 'إضافة مصروف';
-    document.getElementById('exp-modal').style.display = 'flex';
-  },
-
-  openEdit(id) {
-    if (!canDo('edit','finance')) return;
-    const e = this._data.find(x => x.id === id);
-    if (!e) return;
-    this._id = id;
-    document.getElementById('exp-modal-title').textContent = 'تعديل مصروف';
-    document.getElementById('exp-form').reset();
-    const f = document.getElementById('exp-form');
-    ['category','description','amount','expense_date','payment_method','recipient','notes'].forEach(k => {
-      const el = f.querySelector(`[name=${k}]`);
-      if (el) el.value = e[k] || '';
-    });
-    document.getElementById('exp-modal').style.display = 'flex';
-  },
-
-  async save(e) {
-    e.preventDefault();
-    const btn = e.target.querySelector('button[type=submit]');
-    const origTxt = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'جارٍ الحفظ...';
-    try {
-      const raw = getForm('exp-form');
-      if (!raw.category || !raw.description || !raw.amount || !raw.expense_date) {
-        toast('أدخل الفئة والوصف والمبلغ والتاريخ', 'error');
-        return;
-      }
-      const d = {
-        category: raw.category,
-        description: raw.description,
-        amount: parseFloat(raw.amount),
-        currency: 'ج.م.',
-        expense_date: raw.expense_date,
-        payment_method: raw.payment_method,
-        recipient: raw.recipient || null,
-        notes: raw.notes,
-        created_at: new Date().toISOString(),
-      };
-      const { error } = this._id 
-        ? await DB.from('expenses').update(d).eq('id', this._id)
-        : await DB.from('expenses').insert([d]);
-      if (error) throw error;
-      toast('✅ تم الحفظ', 'success');
-      CACHE.invalidate('expenses_' + this._tab);
-      this.closeModal();
-      await this.load(true);
-    } catch(err) {
-      toast('خطأ: ' + err.message, 'error');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = origTxt;
-    }
-  },
-
-  async del(id) {
-    const ok = await CONF.ask('حذف هذا المصروف؟');
-    if (!ok) return;
-    try {
-      await DB.from('expenses').delete().eq('id', id);
-      toast('✅ تم الحذف', 'warn');
-      CACHE.invalidate('expenses_' + this._tab);
-      await this.load(true);
-    } catch(err) {
-      toast('خطأ: ' + err.message, 'error');
-    }
-  },
-
-  closeModal() {
-    document.getElementById('exp-modal').style.display = 'none';
-    this._id = null;
-  },
-};
-
-// ══ FINANCIAL SUMMARY ═══════════════════════════════════════════
-const FIN_SUM = {
-  async load() {
-    try {
-      const { data: summary } = await DB.rpc('financial_summary');
-      if (summary && summary[0]) {
-        const s = summary[0];
-        document.getElementById('sum-rev-month').textContent = (s.monthly_revenue || 0).toFixed(0) + ' ج.م.';
-        document.getElementById('sum-exp-month').textContent = (s.monthly_expenses || 0).toFixed(0) + ' ج.م.';
-        document.getElementById('sum-rev-year').textContent = (s.yearly_revenue || 0).toFixed(0) + ' ج.م.';
-        document.getElementById('sum-exp-year').textContent = (s.yearly_expenses || 0).toFixed(0) + ' ج.م.';
-        const balance = (s.total_balance || 0).toFixed(0);
-        document.getElementById('sum-balance').textContent = balance + ' ج.م.';
-        document.getElementById('sum-balance').style.color = balance < 0 ? 'var(--red)' : 'var(--P)';
-      }
-      toast('✅ تم التحديث', 'info');
-    } catch(err) {
-      toast('خطأ في جلب الملخص: ' + err.message, 'error');
-    }
-  },
-
-  init() {
-    this.load();
-  },
-};
-
